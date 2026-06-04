@@ -1,0 +1,37 @@
+<view class="page">
+  <view class="auth-card" wx:if="{{authLoading}}">
+    <view class="page-title">管理员认证</view>
+    <view class="page-desc">身份检查中...</view>
+  </view>
+
+  <view class="auth-card" wx:elif="{{!verified}}">
+    <view class="page-title">请先完成班级身份验证</view>
+    <view class="page-desc">完成验证后，班委可通过一次性邀请码开通管理员权限。</view>
+    <button class="secondary-button" bindtap="goMemberVerify">去验证</button>
+  </view>
+
+  <view class="auth-card" wx:else>
+    <view class="page-title">管理员认证</view>
+    <view class="page-desc">已完成班级身份验证的班委，可通过一次性邀请码开通管理员权限。</view>
+
+    <view class="field">
+      <view class="field-label">一次性管理员邀请码</view>
+      <input
+        class="form-input"
+        value="{{form.inviteCode}}"
+        placeholder="请输入管理员邀请码"
+        placeholder-class="input-placeholder"
+        bindinput="onInviteCodeInput"
+      />
+    </view>
+
+    <button
+      class="submit-button"
+      loading="{{submitting}}"
+      disabled="{{submitting || !inviteCodeReady}}"
+      bindtap="submitAuth"
+    >
+      开通管理员权限
+    </button>
+  </view>
+</view>

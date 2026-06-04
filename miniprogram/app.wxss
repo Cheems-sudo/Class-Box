@@ -1,0 +1,51 @@
+/**app.wxss**/
+.container {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+view,
+text,
+input,
+textarea,
+button,
+scroll-view,
+picker,
+image {
+  box-sizing: border-box;
+}
+
+button {
+  background: initial;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1.2;
+  transition: transform 0.12s ease, background-color 0.12s ease, opacity 0.12s ease;
+}
+
+button:active {
+  transform: scale(0.98);
+}
+
+button:focus {
+  outline: 0;
+}
+
+button::after {
+  border: none;
+}
+
+page {
+  background: #f4f7fb;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  color: #0f172a;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+  font-size: 28rpx;
+  line-height: 1.5;
+}

@@ -1,0 +1,30 @@
+<view class="page">
+  <view class="verify-card">
+    <view class="title">班级身份验证</view>
+    <view class="desc">本小程序仅供本班成员使用，请输入姓名和学号完成验证</view>
+
+    <view class="field">
+      <view class="label">姓名</view>
+      <input
+        class="input"
+        value="{{name}}"
+        placeholder="请输入姓名"
+        placeholder-class="placeholder"
+        bindinput="onNameInput"
+      />
+    </view>
+
+    <view class="field">
+      <view class="label">学号</view>
+      <input
+        class="input"
+        value="{{studentId}}"
+        placeholder="请输入学号"
+        placeholder-class="placeholder"
+        bindinput="onStudentIdInput"
+      />
+    </view>
+
+    <button class="submit-button" loading="{{submitting}}" disabled="{{submitting}}" bindtap="submitVerify">验证并进入</button>
+  </view>
+</view>

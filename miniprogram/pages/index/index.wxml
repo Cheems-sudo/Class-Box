@@ -1,0 +1,117 @@
+<view class="page">
+  <view class="header">
+    <view class="title">班级盒子</view>
+    <view class="subtitle">本班考试、作业、活动和通知统一整理</view>
+  </view>
+
+  <view class="state-card verify-card" wx:if="{{authLoading}}">
+    <view class="state-title">身份检查中...</view>
+    <view class="state-desc">正在确认班级成员身份</view>
+  </view>
+
+  <view class="state-card verify-card" wx:elif="{{!verified}}">
+    <view class="state-title">请先完成班级身份验证</view>
+    <view class="state-desc">验证后即可查看班级事项列表</view>
+    <button class="verify-button" bindtap="goMemberVerify">去验证</button>
+  </view>
+
+  <block wx:else>
+  <view class="search-box">
+    <text class="search-icon">⌕</text>
+    <input
+      class="search-input"
+      value="{{searchKeyword}}"
+      placeholder="搜索课程、活动或通知"
+      placeholder-class="search-placeholder"
+      confirm-type="search"
+      bindinput="onSearchInput"
+    />
+  </view>
+
+  <view class="filter-block">
+    <view class="filter-label">分类</view>
+    <scroll-view class="category-scroll" scroll-x enable-flex>
+      <view class="category-list">
+        <view
+          class="category {{activeCategory == item ? 'active' : ''}}"
+          wx:for="{{categories}}"
+          wx:key="*this"
+          data-category="{{item}}"
+          bindtap="changeCategory"
+        >
+          {{item}}
+        </view>
+      </view>
+    </scroll-view>
+  </view>
+
+  <view class="filter-block status-block">
+    <view class="filter-label">状态</view>
+    <view class="status-filter">
+      <view
+        class="status-option {{activeStatus == item ? 'active' : ''}}"
+        wx:for="{{statusFilters}}"
+        wx:key="*this"
+        data-status="{{item}}"
+        bindtap="changeStatus"
+      >
+        {{item}}
+      </view>
+    </view>
+  </view>
+
+  <view class="card-list">
+    <view class="state-card" wx:if="{{isLoading}}">
+      <view class="state-title">加载中...</view>
+      <view class="state-desc">正在同步班级事项</view>
+    </view>
+
+    <view class="state-card error" wx:elif="{{loadError}}">
+      <view class="state-title">加载失败，请下拉刷新重试</view>
+      <view class="state-desc">请检查网络或稍后再试</view>
+    </view>
+
+    <block wx:else>
+      <view
+        class="notice-card {{item.isExpired ? 'expired' : ''}}"
+        wx:for="{{filteredNoticeList}}"
+        wx:key="_id"
+        data-index="{{index}}"
+        bindtap="goDetail"
+      >
+        <view class="card-top">
+          <view class="tag-row">
+            <view class="tag">{{item.category}}</view>
+            <view class="pin-tag" wx:if="{{item.isPinned}}">置顶</view>
+            <view class="important" wx:if="{{item.important}}">重要</view>
+            <view class="status-tag {{item.isExpired ? 'expired' : 'active'}}">{{item.statusText}}</view>
+          </view>
+        </view>
+        <view class="card-title">{{item.title}}</view>
+        <view class="time-row">
+          <text class="time-label">{{item.timeLabel || '时间'}}</text>
+          <text class="time-value">{{item.timeText || item.deadline || '未填写'}}</text>
+        </view>
+        <view class="info-grid">
+          <view class="info-item" wx:if="{{item.courseText}}">
+            <text class="meta-label">{{item.courseLabel}}</text>
+            <text class="meta-value">{{item.courseText}}</text>
+          </view>
+          <view class="info-item" wx:if="{{item.locationText}}">
+            <text class="meta-label">{{item.locationLabel}}</text>
+            <text class="meta-value">{{item.locationText}}</text>
+          </view>
+          <view class="info-item">
+            <text class="meta-label">发布人</text>
+            <text class="meta-value">{{item.publisherNameText || '未知'}}</text>
+          </view>
+        </view>
+      </view>
+      <view class="state-card empty" wx:if="{{filteredNoticeList.length == 0}}">
+        <view class="state-title">{{noticeList.length == 0 ? '暂无班级事项' : '暂无相关事项，可切换筛选条件查看'}}</view>
+        <view class="state-desc">{{noticeList.length == 0 ? '发布后的事项会显示在这里' : '可以调整筛选条件或搜索关键词'}}</view>
+      </view>
+    </block>
+  </view>
+</block>
+</view>

@@ -1,0 +1,207 @@
+<view class="page">
+  <view wx:if="{{authLoading}}" class="state-card">权限加载中...</view>
+
+  <view wx:elif="{{!verified}}" class="state-card no-permission-card">
+    <view class="no-permission-title">请先完成班级身份验证</view>
+    <view class="no-permission-desc">验证后即可使用班级盒子主要功能</view>
+    <button class="verify-button" bindtap="goMemberVerify">去验证</button>
+  </view>
+
+  <view wx:elif="{{canPublish}}">
+    <view class="page-title">{{isEdit ? '编辑事项' : '发布班务事项'}}</view>
+
+    <view class="form-section">
+      <view class="section-title">基础信息</view>
+
+      <view class="field">
+        <view class="label required">标题</view>
+        <input
+          class="input"
+          value="{{form.title}}"
+          maxlength="30"
+          placeholder="例如：高等数学期中考试"
+          bindinput="onTitleInput"
+        />
+        <view class="helper">{{form.title.length}}/30</view>
+      </view>
+
+      <view class="field">
+        <view class="label required">分类选择</view>
+        <picker mode="selector" range="{{categories}}" value="{{categoryIndex}}" bindchange="changeCategory">
+          <view class="picker-value">{{form.category || '请选择分类'}}</view>
+        </picker>
+      </view>
+
+      <view class="field">
+        <view class="label">{{courseLabel}}</view>
+        <input
+          class="input"
+          value="{{form.course}}"
+          placeholder="{{coursePlaceholder}}"
+          bindinput="onCourseInput"
+        />
+      </view>
+
+      <view class="field">
+        <view class="label">{{locationLabel}}</view>
+        <input
+          class="input"
+          value="{{form.location}}"
+          placeholder="{{locationPlaceholder}}"
+          bindinput="onLocationInput"
+        />
+      </view>
+    </view>
+
+    <view class="form-section">
+      <view class="section-title">时间信息</view>
+
+      <view class="field" wx:if="{{timeConfig.showTimeLabelPicker}}">
+        <view class="label required">时间类型</view>
+        <picker mode="selector" range="{{timeLabelOptions}}" value="{{timeLabelIndex}}" bindchange="changeTimeLabel">
+          <view class="picker-value time-label-picker">{{form.timeLabel || '选择时间类型'}}</view>
+        </picker>
+      </view>
+
+      <view class="field">
+        <view class="label required">{{timeConfig.mainLabel}}</view>
+        <view class="time-grid">
+          <picker class="time-date-picker" mode="date" value="{{form.date}}" bindchange="onDateChange">
+            <view class="picker-value">{{form.date || '选择日期'}}</view>
+          </picker>
+          <picker class="time-clock-picker" mode="time" value="{{form.time}}" bindchange="onTimeChange">
+            <view class="picker-value">{{form.time || '选时间'}}</view>
+          </picker>
+          <button class="time-clear-button {{form.time ? 'visible' : ''}}" disabled="{{!form.time}}" bindtap="clearMainTime">清空</button>
+        </view>
+      </view>
+
+      <view class="field" wx:if="{{timeConfig.showEndTime}}">
+        <view class="label">{{timeConfig.endSectionLabel}}</view>
+        <view class="time-grid">
+          <picker class="time-date-picker" mode="date" value="{{form.endDate}}" bindchange="onEndDateChange">
+            <view class="picker-value">{{form.endDate || '选日期'}}</view>
+          </picker>
+          <picker class="time-clock-picker" mode="time" value="{{form.endClock}}" bindchange="onEndTimeChange">
+            <view class="picker-value">{{form.endClock || '选时间'}}</view>
+          </picker>
+          <button class="time-clear-button {{(form.endDate || form.endClock) ? 'visible' : ''}}" disabled="{{!(form.endDate || form.endClock)}}" bindtap="clearEndTime">清空</button>
+        </view>
+        <view class="helper left">结束时间可不填；填写后需晚于开始时间</view>
+      </view>
+    </view>
+
+    <view class="form-section">
+      <view class="section-title">详细内容</view>
+
+      <view class="field">
+        <view class="label required">详细内容</view>
+        <textarea
+          class="textarea"
+          value="{{form.content}}"
+          maxlength="500"
+          placeholder="补充说明事项要求、材料、注意事项等"
+          bindinput="onContentInput"
+        ></textarea>
+        <view class="helper">{{form.content.length}}/500</view>
+      </view>
+
+      <view class="switch-field">
+        <view>
+          <view class="label">是否重要</view>
+          <view class="switch-tip">重要事项会在卡片上显示标记</view>
+        </view>
+        <switch checked="{{form.isImportant}}" color="#1e80ff" bindchange="onImportantChange" />
+      </view>
+    </view>
+
+    <view class="form-section">
+      <view class="section-title">相关图片</view>
+      <view class="section-desc">最多上传6张图片</view>
+
+      <view class="image-toolbar">
+        <button class="secondary-button" bindtap="chooseImages" disabled="{{existingImages.length + newImages.length >= maxImageCount}}">选择图片</button>
+        <view class="image-count">{{existingImages.length + newImages.length}}/{{maxImageCount}}</view>
+      </view>
+      <view class="image-list" wx:if="{{existingImages.length || newImages.length}}">
+        <view class="image-item" wx:for="{{existingImages}}" wx:key="fileID" data-url="{{item.tempFileURL || item.fileID || item.url}}" bindtap="previewSelectedImage">
+          <image class="preview-image" src="{{item.tempFileURL || item.fileID || item.url}}" mode="aspectFill"></image>
+          <button class="image-remove-button" data-index="{{index}}" catchtap="removeExistingImage">×</button>
+        </view>
+        <view class="image-item" wx:for="{{newImages}}" wx:key="tempFilePath" data-url="{{item.tempFilePath}}" bindtap="previewSelectedImage">
+          <image class="preview-image" src="{{item.tempFilePath}}" mode="aspectFill"></image>
+          <button class="image-remove-button" data-index="{{index}}" catchtap="removeNewImage">×</button>
+        </view>
+      </view>
+    </view>
+
+    <view class="form-section">
+      <view class="section-title">相关附件</view>
+      <view class="section-desc">附件将从微信聊天文件中选择，首次加载可能较慢；较大附件建议使用电脑端上传，体验更稳定</view>
+
+      <view class="image-toolbar">
+        <button class="secondary-button" bindtap="chooseAttachments" disabled="{{existingAttachments.length + newAttachments.length >= maxAttachmentCount}}">选择附件</button>
+        <view class="image-count">{{existingAttachments.length + newAttachments.length}}/{{maxAttachmentCount}}</view>
+      </view>
+      <view class="attachment-list" wx:if="{{existingAttachments.length || newAttachments.length}}">
+        <view class="attachment-item" wx:for="{{existingAttachments}}" wx:key="fileID">
+          <view class="attachment-info">
+            <view class="attachment-name">{{item.name}}</view>
+            <view class="attachment-size">{{item.formattedSize}}</view>
+          </view>
+          <button class="attachment-remove-button" data-index="{{index}}" bindtap="removeExistingAttachment">删除</button>
+        </view>
+        <view class="attachment-item" wx:for="{{newAttachments}}" wx:key="tempFilePath">
+          <view class="attachment-info">
+            <view class="attachment-name">{{item.name}}</view>
+            <view class="attachment-size">{{item.formattedSize}}</view>
+          </view>
+          <button class="attachment-remove-button" data-index="{{index}}" bindtap="removeNewAttachment">删除</button>
+        </view>
+      </view>
+      <view class="helper left">支持 PDF、Word、Excel、PPT，单个文件不超过20MB</view>
+    </view>
+
+    <view class="form-section">
+      <view class="section-title">相关链接</view>
+
+      <view class="image-toolbar">
+        <button class="secondary-button" bindtap="addLink" disabled="{{form.links.length >= maxLinkCount}}">添加链接</button>
+        <view class="image-count">{{form.links.length}}/{{maxLinkCount}}</view>
+      </view>
+      <view class="link-list" wx:if="{{form.links.length}}">
+        <view class="link-item" wx:for="{{form.links}}" wx:key="index">
+          <view class="link-inputs">
+            <input
+              class="input link-input"
+              value="{{item.title}}"
+              placeholder="链接标题"
+              data-index="{{index}}"
+              bindinput="onLinkTitleInput"
+            />
+            <input
+              class="input link-input"
+              value="{{item.url}}"
+              placeholder="https://example.com"
+              data-index="{{index}}"
+              bindinput="onLinkUrlInput"
+            />
+          </view>
+          <button class="attachment-remove-button link-remove-button" data-index="{{index}}" bindtap="removeLink">删除</button>
+        </view>
+      </view>
+      <view class="helper left">最多添加3个链接，支持 http:// 和 https://</view>
+    </view>
+
+    <view class="submit-actions">
+      <button wx:if="{{!isEdit}}" class="reset-button" bindtap="handleResetForm">重置</button>
+      <button class="submit-button" bindtap="submitForm">{{isEdit ? '保存修改' : '发布'}}</button>
+    </view>
+  </view>
+
+  <view wx:else class="state-card no-permission-card">
+    <view class="no-permission-title">暂无发布权限</view>
+    <view class="no-permission-desc">只有班委或管理员可以发布班级事项</view>
+    <view class="no-permission-tip">如需开通权限，请联系小程序管理员</view>
+  </view>
+</view>

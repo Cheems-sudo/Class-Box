@@ -1,0 +1,48 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/detail/detail",
+    "pages/publish/publish",
+    "pages/favorites/favorites",
+    "pages/my-posts/my-posts",
+    "pages/admin-auth/admin-auth",
+    "pages/member-verify/member-verify",
+    "pages/my/my"
+  ],
+  "window": {
+    "backgroundColor": "#F5F8FC",
+    "backgroundTextStyle": "light",
+    "navigationBarBackgroundColor": "#F5F8FC",
+    "navigationBarTitleText": "班级盒子",
+    "navigationBarTextStyle": "black"
+  },
+  "tabBar": {
+    "color": "#6B7280",
+    "selectedColor": "#1E80FF",
+    "backgroundColor": "#FFFFFF",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页",
+        "iconPath": "images/icons/home.png",
+        "selectedIconPath": "images/icons/home-active.png"
+      },
+      {
+        "pagePath": "pages/publish/publish",
+        "text": "发布",
+        "iconPath": "images/icons/business.png",
+        "selectedIconPath": "images/icons/business-active.png"
+      },
+      {
+        "pagePath": "pages/my/my",
+        "text": "我的",
+        "iconPath": "images/icons/usercenter.png",
+        "selectedIconPath": "images/icons/usercenter-active.png"
+      }
+    ]
+  },
+  "sitemapLocation": "sitemap.json",
+  "style": "v2",
+  "lazyCodeLoading": "requiredComponents"
+}

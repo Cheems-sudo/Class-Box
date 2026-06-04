@@ -1,0 +1,73 @@
+<view class="page">
+  <view class="profile-card">
+    <view class="profile-main" wx:if="{{verified}}">
+      <view class="profile-name">{{name}}</view>
+      <view class="profile-student-id">学号：{{studentId}}</view>
+    </view>
+
+    <view class="profile-main" wx:else>
+      <view class="profile-name muted">未完成身份验证</view>
+      <view class="profile-student-id">完成验证后显示姓名和学号</view>
+    </view>
+
+    <view class="badge-row">
+      <view class="badge {{verified ? 'success' : 'warning'}}">班级身份：{{verified ? '已验证' : '未验证'}}</view>
+      <view class="badge {{isAdmin ? 'admin' : ''}}">系统身份：{{roleText}}</view>
+    </view>
+
+    <button class="verify-button" wx:if="{{!verified}}" bindtap="goMemberVerify">去验证</button>
+  </view>
+
+  <view class="admin-status-card" wx:if="{{verified && role === 'admin'}}">
+    <view class="admin-status-title">你已拥有管理员权限</view>
+  </view>
+
+  <view class="admin-status-card super-admin" wx:if="{{verified && role === 'superAdmin'}}">
+    <view class="admin-status-title">你已拥有超级管理员权限</view>
+  </view>
+
+  <view class="notice-subscribe-card" wx:if="{{verified}}">
+    <view class="card-title">消息提醒</view>
+    <view class="card-subtitle">订阅后，可接收下一条班级事项提醒。订阅消息为一次性授权，发送后需重新订阅。</view>
+    <button class="subscribe-button" loading="{{subscribeLoading}}" disabled="{{subscribeLoading}}" bindtap="subscribeNextNotice">订阅下次通知提醒</button>
+  </view>
+
+  <view class="favorite-card" wx:if="{{verified}}">
+    <view class="favorite-entry" bindtap="goFavorites">
+      <view>
+        <view class="card-title">我的收藏</view>
+        <view class="card-subtitle">查看已收藏的班级事项</view>
+      </view>
+      <view class="entry-action">
+        <text>进入</text>
+        <text class="entry-arrow">›</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="my-posts-card" wx:if="{{verified && (role === 'admin' || role === 'superAdmin')}}">
+    <view class="my-posts-entry" bindtap="goMyPosts">
+      <view>
+        <view class="card-title">我发布的事项</view>
+        <view class="card-subtitle">查看和管理自己发布的内容</view>
+      </view>
+      <view class="entry-action">
+        <text>进入</text>
+        <text class="entry-arrow">›</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="admin-apply-card" wx:if="{{verified && role === 'user'}}">
+    <view class="admin-apply-entry" bindtap="goAdminAuth">
+      <view>
+        <view class="card-title">开通管理员权限</view>
+        <view class="card-subtitle">班委可通过一次性邀请码开通</view>
+      </view>
+      <view class="entry-action">
+        <text>进入</text>
+        <text class="entry-arrow">›</text>
+      </view>
+    </view>
+  </view>
+</view>
