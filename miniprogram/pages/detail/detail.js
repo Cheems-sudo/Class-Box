@@ -16,7 +16,7 @@ Page({
     favoriteLoading: false,
   },
   onLoad(options) {
-    this.pendingNoticeId = options && options.id ? String(options.id).trim() : "";
+    this.pendingNoticeId = String((options && (options.noticeId || options.id)) || "").trim();
 
     if (this.pendingNoticeId) {
       this.setData({
@@ -27,32 +27,15 @@ Page({
       return;
     }
 
-    if (!options.notice) {
-      this.setData({
-        notFound: true,
-      });
-      this.checkAdminPermission();
-      return;
-    }
-
-    try {
-      const detail = this.normalizeDetail(JSON.parse(decodeURIComponent(options.notice)));
-
-      this.setData({
-        detail,
-        notFound: false,
-      });
-      this.checkAdminPermission();
-    } catch (error) {
-      console.error("解析事项详情失败", error);
-      this.setData({
-        detail: null,
-        notFound: true,
-      });
-      this.checkAdminPermission();
-    }
+    this.setData({
+      detail: null,
+      notFound: true,
+    });
+    this.checkAdminPermission();
   },
   normalizeDetail(detail) {
+    detail.isPinned = detail.isPinned === true || detail.pinned === true;
+    detail.pinned = detail.isPinned;
     detail.category = this.normalizeCategory(detail.category);
     detail.timeLabel = this.normalizeTimeLabel(detail.timeLabel || this.getDefaultTimeLabel(detail.category));
     detail.place = detail.place || detail.location;
@@ -97,8 +80,7 @@ Page({
         this.loadImageTempFileURLs();
         this.loadFavoriteStatus();
       })
-      .catch((error) => {
-        console.error("[detail] 重新读取事项详情失败", error);
+      .catch(() => {
         this.setData({
           detail: null,
           notFound: true,
@@ -106,13 +88,11 @@ Page({
       });
   },
   checkAdminPermission() {
-    console.log("[detail] 开始 checkAdmin 身份检查");
     wx.cloud
       .callFunction({
         name: "checkAdmin",
       })
       .then((res) => {
-        console.log("[detail] checkAdmin 身份检查完成", res);
         const result = res.result || {};
 
         if (!result.success) {
@@ -142,8 +122,7 @@ Page({
           }
         }
       })
-      .catch((error) => {
-        console.error("[detail] checkAdmin 身份检查失败", error);
+      .catch(() => {
         this.setData({
           authLoading: false,
           verified: false,
@@ -191,9 +170,7 @@ Page({
           favoriteId: favorite ? favorite._id : "",
         });
       })
-      .catch((error) => {
-        console.error("[detail] 读取收藏状态失败", error);
-      });
+      .catch(() => {});
   },
   toggleFavorite() {
     if (this.data.favoriteLoading) {
@@ -271,8 +248,7 @@ Page({
           icon: "success",
         });
       })
-      .catch((error) => {
-        console.error("[detail] 收藏操作失败", error);
+      .catch(() => {
         this.setData({
           favoriteLoading: false,
         });
@@ -355,7 +331,6 @@ Page({
             const result = res.result || {};
 
             if (!result.success) {
-              console.error("删除事项失败", result);
               wx.showToast({
                 title: result.message || "删除失败",
                 icon: "none",
@@ -371,8 +346,7 @@ Page({
               url: "/pages/index/index",
             });
           })
-          .catch((error) => {
-            console.error("删除事项失败", error);
+          .catch(() => {
             wx.showToast({
               title: "删除失败",
               icon: "none",
@@ -401,27 +375,31 @@ Page({
     }
 
     const nextPinned = detail.isPinned !== true;
-    const db = wx.cloud.database();
 
-    db.collection("notices")
-      .doc(detail._id)
-      .update({
-        data: {
-          isPinned: nextPinned,
-          updatedAt: new Date().toISOString(),
-        },
-      })
-      .then(() => {
+    wx.cloud.callFunction({
+      name: "updateNoticePin",
+      data: {
+        noticeId: detail._id,
+        pinned: nextPinned,
+      },
+    })
+      .then((res) => {
+        const result = res.result || {};
+
+        if (!result.success) {
+          throw new Error(result.message || "updateNoticePin failed");
+        }
+
         this.setData({
           "detail.isPinned": nextPinned,
+          "detail.pinned": nextPinned,
         });
         wx.showToast({
           title: nextPinned ? "已置顶" : "已取消置顶",
           icon: "success",
         });
       })
-      .catch((error) => {
-        console.error("置顶操作失败", error);
+      .catch(() => {
         wx.showToast({
           title: "操作失败",
           icon: "none",
@@ -489,13 +467,9 @@ Page({
       return;
     }
 
-    console.log("[detail] 开始获取图片临时链接", {
-      count: fileList.length,
-    });
     wx.cloud.getTempFileURL({
       fileList,
     }).then((res) => {
-      console.log("[detail] 图片临时链接获取完成", res);
       const tempFileMap = {};
 
       (res.fileList || []).forEach((file) => {
@@ -512,9 +486,7 @@ Page({
       this.setData({
         "detail.images": nextImages,
       });
-    }).catch((error) => {
-      console.error("[detail] 获取图片临时链接失败", error);
-    });
+    }).catch(() => {});
   },
   previewImage(e) {
     const index = Number(e.currentTarget.dataset.index);
@@ -552,13 +524,8 @@ Page({
   async openAttachment(e) {
     const index = Number(e.currentTarget.dataset.index);
     const attachment = (this.data.detail.attachments || [])[index];
-    console.log("[detail] 开始附件打开流程", {
-      index,
-      attachment,
-    });
 
     if (!attachment || !attachment.fileID) {
-      console.error("[detail] 附件文件信息异常", attachment);
       wx.showToast({
         title: "文件信息异常",
         icon: "none",
@@ -582,9 +549,6 @@ Page({
     });
 
     try {
-      console.log("[detail] 开始获取附件临时链接", {
-        fileID: attachment.fileID,
-      });
       const tempUrlRes = await new Promise((resolve, reject) => {
         wx.cloud.getTempFileURL({
           fileList: [attachment.fileID],
@@ -592,17 +556,10 @@ Page({
           fail: reject,
         });
       });
-      console.log("[detail] 附件临时链接获取完成", tempUrlRes);
-
-      if ((tempUrlRes.fileList || []).some((file) => file.status !== undefined && file.status !== 0)) {
-        console.error("[detail] 附件临时链接状态异常", tempUrlRes.fileList);
-      }
-
       const file = (tempUrlRes.fileList || [])[0] || {};
       const tempFileURL = file.tempFileURL;
 
       if (!tempFileURL) {
-        console.error("[detail] 附件临时链接为空", tempUrlRes.fileList || tempUrlRes);
         wx.showToast({
           title: "文件打开失败",
           icon: "none",
@@ -613,7 +570,6 @@ Page({
       let downloadRes;
 
       try {
-        console.log("[detail] 开始下载附件");
         downloadRes = await new Promise((resolve, reject) => {
           wx.downloadFile({
             url: tempFileURL,
@@ -621,9 +577,7 @@ Page({
             fail: reject,
           });
         });
-        console.log("[detail] 附件下载完成", downloadRes);
       } catch (err) {
-        console.error("[detail] 附件下载失败", err);
         wx.showToast({
           title: "网络超时，请稍后重试",
           icon: "none",
@@ -632,7 +586,6 @@ Page({
       }
 
       if ((downloadRes.statusCode && downloadRes.statusCode !== 200) || !downloadRes.tempFilePath) {
-        console.error("[detail] 附件下载结果异常", downloadRes);
         wx.showToast({
           title: "文件下载失败",
           icon: "none",
@@ -640,15 +593,9 @@ Page({
         return;
       }
 
-      console.log("[detail] 附件原始文件名", attachment.name);
-
       const safeFileName = this.getSafeAttachmentFileName(attachment.name, fileType);
       const destPath = `${wx.env.USER_DATA_PATH}/${safeFileName}`;
       let openFilePath = destPath;
-
-      console.log("[detail] 开始保存附件到本地", {
-        destPath,
-      });
 
       try {
         await new Promise((resolve, reject) => {
@@ -659,21 +606,12 @@ Page({
             fail: reject,
           });
         });
-        console.log("[detail] 附件本地保存完成", {
-          destPath,
-        });
       } catch (err) {
-        console.error("[detail] 附件本地保存失败，使用临时文件打开", err);
         openFilePath = downloadRes.tempFilePath;
       }
 
-      console.log("[detail] 开始打开文件", {
-        filePath: openFilePath,
-        fileType,
-      });
-
       try {
-        const openRes = await new Promise((resolve, reject) => {
+        await new Promise((resolve, reject) => {
           wx.openDocument({
             filePath: openFilePath,
             fileType,
@@ -682,22 +620,18 @@ Page({
             fail: reject,
           });
         });
-        console.log("[detail] 文件打开完成", openRes);
       } catch (err) {
-        console.error("[detail] 文件打开失败", err);
         wx.showToast({
           title: "文件打开失败",
           icon: "none",
         });
       }
     } catch (error) {
-      console.error("[detail] 附件打开流程失败", error);
       wx.showToast({
         title: "网络超时，请稍后重试",
         icon: "none",
       });
     } finally {
-      console.log("[detail] 附件打开流程结束");
       wx.hideLoading();
     }
   },

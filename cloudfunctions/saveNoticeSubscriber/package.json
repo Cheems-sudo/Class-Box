@@ -1,14 +1,13 @@
 {
-  "name": "sendNoticeMessage",
+  "name": "saveNoticeSubscriber",
   "version": "1.0.0",
-  "description": "",
+  "description": "Safely save the current user's notice subscription",
   "main": "index.js",
   "scripts": {
     "test": "node --check index.js"
   },
-  "author": "",
-  "license": "MIT",
   "dependencies": {
     "wx-server-sdk": "~2.4.0"
-  }
+  },
+  "license": "MIT"
 }

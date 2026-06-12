@@ -150,7 +150,6 @@ Page({
     this.checkPublishPermission();
   },
   checkPublishPermission() {
-    console.log("[publish] 开始 checkAdmin 身份检查");
     this.setData({
       authLoading: true,
     });
@@ -160,7 +159,6 @@ Page({
         name: "checkAdmin",
       })
       .then((res) => {
-        console.log("[publish] checkAdmin 身份检查完成", res);
         const result = res.result || {};
 
         if (!result.success) {
@@ -181,8 +179,7 @@ Page({
 
         return canPublish;
       })
-      .catch((error) => {
-        console.error("[publish] checkAdmin 身份检查失败", error);
+      .catch(() => {
         this.setData({
           authLoading: false,
           verified: false,
@@ -222,7 +219,6 @@ Page({
 
       this.fillEditForm(notice);
     } catch (error) {
-      console.error("解析编辑事项失败", error);
       wx.showToast({
         title: "编辑数据异常",
         icon: "none",
@@ -243,7 +239,6 @@ Page({
     wx.removeStorageSync(editNoticeStorageKey);
 
     if (!notice._id) {
-      console.error("[publish] 编辑缓存事项缺少 _id", notice);
       wx.showToast({
         title: "事项信息异常",
         icon: "none",
@@ -434,13 +429,9 @@ Page({
       return;
     }
 
-    console.log("[publish] 开始获取已有图片临时链接", {
-      count: fileList.length,
-    });
     wx.cloud.getTempFileURL({
       fileList,
     }).then((res) => {
-      console.log("[publish] 已有图片临时链接获取完成", res);
       const tempFileMap = {};
 
       (res.fileList || []).forEach((file) => {
@@ -457,9 +448,7 @@ Page({
       this.setData({
         existingImages: nextImages,
       });
-    }).catch((error) => {
-      console.error("[publish] 获取已有图片临时链接失败", error);
-    });
+    }).catch(() => {});
   },
   normalizeUploadedAt(value) {
     if (!value) {
@@ -767,13 +756,9 @@ Page({
     const images = this.data.newImages;
 
     if (!images.length) {
-      console.log("[publish] 无新图片需要上传");
       return Promise.resolve([]);
     }
 
-    console.log("[publish] 开始上传图片", {
-      count: images.length,
-    });
     wx.showLoading({
       title: "图片上传中",
       mask: true,
@@ -782,20 +767,10 @@ Page({
     return Promise.all(images.map((image) => {
       const cloudPath = `notice-images/${Date.now()}-${this.getRandomString()}.${this.getImageExt(image.tempFilePath)}`;
 
-      console.log("[publish] 开始上传单张图片", {
-        cloudPath,
-        name: image.name,
-      });
-
       return wx.cloud.uploadFile({
         cloudPath,
         filePath: image.tempFilePath,
       }).then((res) => {
-        console.log("[publish] 单张图片上传完成", {
-          cloudPath,
-          fileID: res.fileID,
-        });
-
         return {
           fileID: res.fileID,
           name: image.name,
@@ -804,13 +779,9 @@ Page({
       });
     })).then((uploadedImages) => {
       wx.hideLoading();
-      console.log("[publish] 图片上传完成", {
-        count: uploadedImages.length,
-      });
       return uploadedImages;
     }).catch((error) => {
       wx.hideLoading();
-      console.error("[publish] 图片上传失败", error);
       wx.showToast({
         title: "上传失败，请检查网络后重试",
         icon: "none",
@@ -831,13 +802,9 @@ Page({
     const attachments = this.data.newAttachments;
 
     if (!attachments.length) {
-      console.log("[publish] 无新附件需要上传");
       return Promise.resolve([]);
     }
 
-    console.log("[publish] 开始上传附件", {
-      count: attachments.length,
-    });
     wx.showLoading({
       title: "附件上传中",
       mask: true,
@@ -846,21 +813,10 @@ Page({
     return Promise.all(attachments.map((attachment) => {
       const cloudPath = `notice-files/${Date.now()}-${this.getRandomString()}-${this.sanitizeFileName(attachment.name)}`;
 
-      console.log("[publish] 开始上传单个附件", {
-        cloudPath,
-        name: attachment.name,
-        size: attachment.size,
-      });
-
       return wx.cloud.uploadFile({
         cloudPath,
         filePath: attachment.tempFilePath,
       }).then((res) => {
-        console.log("[publish] 单个附件上传完成", {
-          cloudPath,
-          fileID: res.fileID,
-        });
-
         return {
           fileID: res.fileID,
           name: attachment.name,
@@ -871,13 +827,9 @@ Page({
       });
     })).then((uploadedAttachments) => {
       wx.hideLoading();
-      console.log("[publish] 附件上传完成", {
-        count: uploadedAttachments.length,
-      });
       return uploadedAttachments;
     }).catch((error) => {
       wx.hideLoading();
-      console.error("[publish] 附件上传失败", error);
       wx.showToast({
         title: "上传失败，请检查网络后重试",
         icon: "none",
@@ -1005,17 +957,43 @@ Page({
     return validLinks;
   },
   isValidLink(url) {
-    return /^https?:\/\/[^\s/$.?#].[^\s]*$/i.test(url);
+    return /^https?:\/\/[^\s]+$/i.test(String(url || "").trim());
+  },
+  validateNoticePayload(noticeData) {
+    const images = noticeData.images;
+    const attachments = noticeData.attachments;
+    const links = noticeData.links;
+
+    if (!Array.isArray(images) || images.length > maxImageCount || images.some((image) => !image || !String(image.fileID || "").trim())) {
+      return "图片数据不符合要求";
+    }
+
+    if (!Array.isArray(attachments) || attachments.length > maxAttachmentCount) {
+      return `附件数量不能超过${maxAttachmentCount}个`;
+    }
+
+    for (const attachment of attachments) {
+      const fileID = String((attachment && attachment.fileID) || "").trim();
+      const name = String((attachment && attachment.name) || "").trim();
+      const size = Number(attachment && attachment.size);
+      const type = String((attachment && attachment.type) || "").trim().toLowerCase();
+
+      if (!fileID || !name || !Number.isFinite(size) || size < 0 || size > maxAttachmentSize || !supportedAttachmentTypes.includes(type)) {
+        return "附件数据不符合要求";
+      }
+    }
+
+    if (!Array.isArray(links) || links.length > maxLinkCount || links.some((link) => !link || !this.isValidLink(link.url))) {
+      return "链接数据不符合要求";
+    }
+
+    return "";
   },
   buildDateTime(date, time) {
     return time ? `${date} ${time}` : date;
   },
   submitForm() {
-    console.log("[publish] 开始提交前权限检查");
     this.checkPublishPermission().then((canPublish) => {
-      console.log("[publish] 提交前权限检查完成", {
-        canPublish,
-      });
       if (canPublish === null) {
         return;
       }
@@ -1037,8 +1015,7 @@ Page({
       }
 
       this.submitNotice();
-    }).catch((error) => {
-      console.error("[publish] 提交前权限检查异常", error);
+    }).catch(() => {
       wx.showToast({
         title: "网络超时，请稍后重试",
         icon: "none",
@@ -1056,15 +1033,7 @@ Page({
     const isEdit = this.data.isEdit === true;
     const noticeId = String(this.data.editNoticeId || "").trim();
 
-    console.log("[publish] 当前模式:", isEdit ? "编辑" : "新增");
-    console.log("[publish] 编辑事项ID:", noticeId);
-
     if (isEdit && !noticeId) {
-      console.error("[publish] 编辑模式缺少事项ID", {
-        pageOptions: this.pageOptions || {},
-        isEdit: this.data.isEdit,
-        editNoticeId: this.data.editNoticeId,
-      });
       wx.showToast({
         title: "事项信息异常",
         icon: "none",
@@ -1084,8 +1053,6 @@ Page({
       return;
     }
 
-    console.log("[publish] 当前标题:", this.data.title || (this.data.formData && this.data.formData.title) || this.data.form.title);
-
     const now = new Date().toISOString();
     const endTime = this.data.timeConfig.showEndTime && form.endDate ? this.buildDateTime(form.endDate, form.endClock) : "";
     let uploadedImages = [];
@@ -1095,7 +1062,6 @@ Page({
       uploadedAttachments = await this.uploadNewAttachments();
       uploadedImages = await this.uploadNewImages();
     } catch (error) {
-      console.error("[publish] 上传阶段失败，停止发布", error);
       return;
     }
 
@@ -1137,15 +1103,54 @@ Page({
     }
 
     const writeData = isEdit ? this.sanitizeNoticeData(noticeData) : noticeData;
+    const payloadValidationError = this.validateNoticePayload(writeData);
 
-    console.log("[publish] 准备写入的数据:", writeData);
-    console.log("[publish] 准备更新标题:", writeData.title);
+    if (payloadValidationError) {
+      this.showError(payloadValidationError);
+      return;
+    }
+
+    wx.showLoading({
+      title: "安全检测中",
+      mask: true,
+    });
+
+    let securityRes;
+
+    try {
+      securityRes = await wx.cloud.callFunction({
+        name: "contentSecurityCheck",
+        data: {
+          title: writeData.title,
+          content: writeData.content,
+          links: writeData.links,
+          images: writeData.images,
+        },
+      });
+    } catch (error) {
+      wx.hideLoading();
+      wx.showToast({
+        title: "内容安全检测失败，请稍后重试",
+        icon: "none",
+      });
+      return;
+    }
+
+    const securityResult = securityRes.result || {};
+
+    if (!securityResult.success) {
+      wx.hideLoading();
+      wx.showToast({
+        title: securityResult.message || "内容安全检测失败，请稍后重试",
+        icon: "none",
+      });
+      return;
+    }
 
     wx.showLoading({
       title: isEdit ? "修改中" : "发布中",
+      mask: true,
     });
-
-    const db = wx.cloud.database();
 
     try {
       const dbRes = isEdit
@@ -1156,24 +1161,22 @@ Page({
             noticeData: writeData,
           },
         })
-        : await db.collection("notices").add({
-          data: writeData,
+        : await wx.cloud.callFunction({
+          name: "createNotice",
+          data: {
+            noticeData: writeData,
+          },
         });
 
-      console.log("[publish] 数据库写入结果:", dbRes);
+      const result = dbRes.result || {};
 
-      if (isEdit) {
-        const result = dbRes.result || {};
-
-        if (!result.success) {
-          console.error("[publish] updateNotice 返回失败:", dbRes);
-          wx.hideLoading();
-          wx.showToast({
-            title: result.message || "修改失败",
-            icon: "none",
-          });
-          return;
-        }
+      if (!result.success) {
+        wx.hideLoading();
+        wx.showToast({
+          title: result.message || (isEdit ? "修改失败" : "发布失败"),
+          icon: "none",
+        });
+        return;
       }
 
       wx.hideLoading();
@@ -1183,11 +1186,8 @@ Page({
 
       if (!isEdit) {
         try {
-          console.log("[publish] 开始发送订阅消息");
-          const messageRes = await this.sendNoticeMessage(dbRes._id, writeData);
-          console.log("[publish] 订阅消息发送完成", messageRes);
+          await this.sendNoticeMessage(result.noticeId);
         } catch (error) {
-          console.error("[publish] 订阅消息发送失败", error);
           toastTitle = "发布成功，提醒发送失败";
           toastIcon = "none";
         }
@@ -1207,7 +1207,6 @@ Page({
       }, 800);
     } catch (error) {
       wx.hideLoading();
-      console.error("[publish] 保存失败:", error);
       wx.showToast({
         title: isEdit ? "修改失败" : "发布失败",
         icon: "none",
@@ -1310,17 +1309,11 @@ Page({
 
     return data;
   },
-  sendNoticeMessage(noticeId, notice) {
-    console.log("[publish] 调用 sendNoticeMessage 云函数", {
-      noticeId,
-    });
+  sendNoticeMessage(noticeId) {
     return wx.cloud.callFunction({
       name: "sendNoticeMessage",
       data: {
         noticeId,
-        title: notice.title,
-        deadline: notice.deadline,
-        timeLabel: notice.timeLabel,
       },
     });
   },

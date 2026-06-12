@@ -18,7 +18,6 @@ Page({
     this.checkMemberVerification();
   },
   onShow() {
-    console.log("[index] onShow 重新加载事项");
     this.checkMemberVerification();
   },
   onPullDownRefresh() {
@@ -27,7 +26,6 @@ Page({
     });
   },
   checkMemberVerification(options = {}) {
-    console.log("[index] 开始 checkAdmin 身份检查");
     this.setData({
       authLoading: true,
     });
@@ -35,7 +33,6 @@ Page({
     return wx.cloud.callFunction({
       name: "checkAdmin",
     }).then((res) => {
-      console.log("[index] checkAdmin 身份检查完成", res);
       const result = res.result || {};
 
       if (!result.success) {
@@ -64,8 +61,7 @@ Page({
       }
 
       return this.loadNotices(options);
-    }).catch((error) => {
-      console.error("[index] checkAdmin 身份检查失败", error);
+    }).catch(() => {
       this.setData({
         authLoading: false,
         verified: false,
@@ -86,7 +82,6 @@ Page({
     });
   },
   loadNotices(options = {}) {
-    console.log("[index] 开始读取 notices");
     this.setData({
       isLoading: true,
       loadError: false,
@@ -94,12 +89,6 @@ Page({
 
     this.fetchVisibleNotices()
       .then((list) => {
-        console.log("[index] 数据库读取事项数量:", list.length);
-        console.log("[index] notices 读取完成", {
-          count: list.length,
-          list,
-        });
-
         const noticeList = list.map((notice) => {
           const category = this.normalizeCategory(notice.category);
           const timeLabel = this.normalizeTimeLabel(notice.timeLabel || this.getDefaultTimeLabel(category));
@@ -150,9 +139,7 @@ Page({
           }
         });
       })
-      .catch((error) => {
-        console.error("[index] notices 读取失败", error);
-
+      .catch(() => {
         this.setData({
           noticeList: [],
           filteredNoticeList: [],
@@ -171,28 +158,18 @@ Page({
       });
   },
   async fetchVisibleNotices() {
-    console.log("[index] 开始读取 published notices");
     const db = wx.cloud.database();
     const _ = db.command;
     const publishedList = await this.fetchNoticesByWhere({
       status: "published",
     });
-    console.log("[index] published notices 读取完成", {
-      count: publishedList.length,
-    });
     let legacyList = [];
 
     try {
-      console.log("[index] 开始读取旧 notices");
       legacyList = await this.fetchNoticesByWhere({
         status: _.exists(false),
       });
-      console.log("[index] 旧 notices 读取完成", {
-        count: legacyList.length,
-      });
-    } catch (error) {
-      console.error("[index] 旧 notices 读取失败", error);
-    }
+    } catch (error) {}
 
     const noticeMap = {};
 
@@ -210,10 +187,6 @@ Page({
     let page = 0;
 
     while (true) {
-      console.log("[index] 开始读取 notices 分页", {
-        where,
-        page,
-      });
       const res = await db.collection("notices")
         .where(where)
         .orderBy("deadline", "asc")
@@ -221,11 +194,6 @@ Page({
         .limit(noticePageSize)
         .get();
       const currentList = res.data || [];
-      console.log("[index] notices 分页读取完成", {
-        where,
-        page,
-        count: currentList.length,
-      });
 
       allNotices.push(...currentList);
 
@@ -417,12 +385,6 @@ Page({
     this.setData({
       filteredNoticeList,
     });
-
-    console.log("首页筛选后事项数量:", filteredNoticeList.length, {
-      activeStatus,
-      activeCategory,
-      searchKeyword,
-    });
   },
   goDetail(e) {
     const index = e.currentTarget.dataset.index;
@@ -432,10 +394,8 @@ Page({
       return;
     }
 
-    const noticeParam = encodeURIComponent(JSON.stringify(notice));
-
     wx.navigateTo({
-      url: `/pages/detail/detail?notice=${noticeParam}`,
+      url: `/pages/detail/detail?noticeId=${notice._id}`,
     });
   },
   goMemberVerify() {

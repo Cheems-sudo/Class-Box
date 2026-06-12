@@ -18,13 +18,11 @@ Page({
     this.checkAdminPermission();
   },
   checkAdminPermission() {
-    console.log("[my] 开始 checkAdmin 身份检查");
     return wx.cloud
       .callFunction({
         name: "checkAdmin",
       })
       .then((res) => {
-        console.log("[my] checkAdmin 身份检查完成", res);
         const result = res.result || {};
 
         if (!result.success) {
@@ -41,7 +39,6 @@ Page({
         });
       })
       .catch((error) => {
-        console.error("[my] checkAdmin 身份检查失败", error);
         this.setData({
           isAdmin: false,
           role: "user",
@@ -97,7 +94,6 @@ Page({
       return;
     }
 
-    console.log("[my] 开始订阅消息授权");
     this.setData({
       subscribeLoading: true,
     });
@@ -105,7 +101,6 @@ Page({
     wx.requestSubscribeMessage({
       tmplIds: [noticeTemplateId],
       success: (res) => {
-        console.log("[my] 订阅消息授权完成", res);
         const subscribeResult = res[noticeTemplateId];
 
         if (subscribeResult === "accept") {
@@ -137,7 +132,6 @@ Page({
         });
       },
       fail: (error) => {
-        console.error("[my] 订阅消息授权失败", error);
         wx.showToast({
           title: "订阅失败，请稍后重试",
           icon: "none",
@@ -149,67 +143,26 @@ Page({
     });
   },
   saveNoticeSubscriber() {
-    console.log("[my] 开始保存订阅记录前身份检查");
     return wx.cloud
       .callFunction({
-        name: "checkAdmin",
+        name: "saveNoticeSubscriber",
       })
       .then((res) => {
-        console.log("[my] 保存订阅记录前身份检查完成", res);
         const result = res.result || {};
 
-        if (!result.success || !result.openid) {
-          throw new Error(result.message || "get openid failed");
+        if (!result.success) {
+          throw new Error(result.message || "save subscriber failed");
         }
 
-        const now = new Date();
-        const db = wx.cloud.database();
-
-        console.log("[my] 开始查询有效订阅记录");
-        return db.collection("subscribers")
-          .where({
-            openid: result.openid,
-            templateId: noticeTemplateId,
-            used: false,
-            enabled: true,
-          })
-          .limit(1)
-          .get()
-          .then((subscriberRes) => {
-            console.log("[my] 有效订阅记录查询完成", subscriberRes);
-            const existingSubscribers = subscriberRes.data || [];
-
-            if (existingSubscribers.length > 0) {
-              return {
-                alreadySubscribed: true,
-              };
-            }
-
-            console.log("[my] 开始新增订阅记录");
-            return db.collection("subscribers").add({
-              data: {
-                openid: result.openid,
-                templateId: noticeTemplateId,
-                used: false,
-                enabled: true,
-                createdAt: now,
-                updatedAt: now,
-              },
-            }).then((addRes) => {
-              console.log("[my] 新增订阅记录完成", addRes);
-              return addRes;
-            });
-          });
+        return result;
       })
       .then((res) => {
-        console.log("[my] 订阅记录保存流程完成", res);
         wx.showToast({
           title: res && res.alreadySubscribed ? "你已订阅下次通知提醒" : "订阅成功",
           icon: "success",
         });
       })
       .catch((error) => {
-        console.error("[my] 保存订阅记录失败", error);
         wx.showToast({
           title: "网络超时，请稍后重试",
           icon: "none",

@@ -1,26 +1,48 @@
 # 部署说明
 
-本文档说明如何将班级盒子部署到自己的微信小程序云开发环境。
+本文档面向自行部署班级盒子的使用者。请使用自己的微信小程序、云开发环境、数据库和订阅消息模板，不要使用正式项目的任何真实配置。
 
-## 导入项目
+## 1. 准备配置
 
-1. 打开微信开发者工具。
-2. 选择导入项目。
-3. 项目目录选择本仓库根目录。
-4. AppID 填写自己的微信小程序 AppID。
-5. 导入后确认小程序根目录为 `miniprogram/`，云函数目录为 `cloudfunctions/`。
+1. 在微信公众平台创建或准备自己的小程序。
+2. 在微信开发者工具中开通云开发。
+3. 复制 `project.config.example.json` 为本地项目配置，并填入自己的 AppID。
+4. 复制 `miniprogram/config.example.js` 为 `miniprogram/config.js`，填入自己的云环境 ID 和订阅消息模板 ID。
+5. 复制 `cloudfunctions/sendNoticeMessage/config.example.js` 为 `cloudfunctions/sendNoticeMessage/config.js`，填入自己的订阅消息模板 ID。
+6. 复制 `cloudfunctions/saveNoticeSubscriber/config.example.js` 为 `cloudfunctions/saveNoticeSubscriber/config.js`，填入同一个订阅消息模板 ID。
 
-## 开通微信云开发
+不要提交以下文件：
 
-1. 在微信开发者工具中打开项目。
-2. 点击工具栏中的云开发入口。
-3. 按提示开通云开发服务。
-4. 创建一个云开发环境，并记录自己的云环境 ID。
-5. 将 `miniprogram/config.example.js` 复制为 `miniprogram/config.js`，填写自己的 `envId`。
+- `project.private.config.json`
+- `project.config.json`
+- `miniprogram/config.js`
+- `cloudfunctions/sendNoticeMessage/config.js`
+- `cloudfunctions/saveNoticeSubscriber/config.js`
 
-## 创建数据库集合
+## 2. 部署云函数
 
-在云开发控制台的数据库中创建以下集合：
+使用者需要在微信开发者工具中部署 `cloudfunctions` 下所有云函数。
+
+需要部署的云函数列表：
+
+- `applyAdminInvite`
+- `checkAdmin`
+- `contentSecurityCheck`
+- `createNotice`
+- `deleteNotice`
+- `saveNoticeSubscriber`
+- `sendNoticeMessage`
+- `updateNotice`
+- `updateNoticePin`
+- `verifyMember`
+
+其中 `contentSecurityCheck`、`createNotice`、`updateNotice` 需要使用微信内容安全相关 OpenAPI 权限，包括文本检测和图片检测。
+
+`sendNoticeMessage/config.json` 已声明订阅消息发送 OpenAPI 权限，部署时请确认该权限配置生效。
+
+## 3. 创建数据库集合
+
+使用者需要在云开发数据库中创建项目所需集合：
 
 - `notices`
 - `users`
@@ -28,47 +50,48 @@
 - `class_members`
 - `subscribers`
 - `favorites`
+- `security_counters`
+- `operation_logs`
 
-创建后请根据自己的使用场景设置数据库权限。正式使用前应避免给敏感集合设置过宽的前端写权限。
+`security_counters` 使用固定时间桶记录发布、编辑、邀请码尝试等频率限制计数。
 
-## 部署云函数
+`operation_logs` 用于身份认证、管理员授权、事项发布、编辑、删除等关键操作日志。
 
-需要部署的云函数包括：
+建议定期删除 `security_counters.expiresAt` 已过期的记录，并根据运营需要为 `operation_logs` 设置保留周期。
 
-- `verifyMember`
-- `applyAdminInvite`
-- `checkAdmin`
-- `deleteNotice`
-- `updateNotice`
-- `sendNoticeMessage`
+建议为高频查询字段创建索引，例如：
 
-部署步骤：
+- `users.openid`
+- `users.verified`
+- `class_members.name`
+- `class_members.studentId`
+- `notices.createdAt`
+- `notices.publisherOpenid`
+- `favorites.openid`
+- `favorites.noticeId`
+- `security_counters.openid`
+- `security_counters.action`
+- `security_counters.windowStart`
+- `operation_logs.openid`
+- `operation_logs.action`
+- `operation_logs.createdAt`
 
-1. 在微信开发者工具中展开 `cloudfunctions/`。
-2. 右键选择需要部署的云函数目录。
-3. 选择上传并部署。
-4. 如有依赖，选择云端安装依赖。
-5. 逐个部署上方列出的云函数。
+## 4. 数据库权限
 
-`sendNoticeMessage` 需要本地配置文件。将 `cloudfunctions/sendNoticeMessage/config.example.js` 复制为 `cloudfunctions/sendNoticeMessage/config.js`，填写自己的订阅消息模板 ID 后再部署。
+建议尽量收紧数据库权限：
 
-## 配置订阅消息模板
+- 普通用户不应直接写入 `notices`，发布应通过 `createNotice` 云函数。
+- 普通用户不应直接写入 `subscribers`，订阅授权应通过 `saveNoticeSubscriber` 云函数保存。
+- 普通用户不应直接写入 `security_counters`。
+- 普通用户不应直接写入 `operation_logs`。
+- 管理员授权、发布、编辑、删除等敏感操作应通过云函数完成权限校验。
+- `class_members`、`admin_invite_codes` 等敏感集合不要开放普通用户直接读写。
 
-1. 登录微信公众平台。
-2. 进入订阅消息配置页面。
-3. 创建或选择适合班级事项提醒的模板。
-4. 记录模板 ID。
-5. 将模板 ID 填入：
-   - `miniprogram/config.js` 的 `subscribeTemplateId`
-   - `cloudfunctions/sendNoticeMessage/config.js` 的 `subscribeTemplateId`
-6. 确认模板字段与 `sendNoticeMessage` 云函数中的发送字段匹配。
+具体权限矩阵见 `docs/database-permissions.md`，再结合你的云开发环境和业务需求配置。
 
-## 导入班级成员数据
+## 5. 导入班级成员数据
 
-1. 准备自己的班级成员名单。
-2. 按 `class_members` 集合字段整理数据，至少包含 `name`、`studentId`、`verified`、`boundOpenid`。
-3. 在云开发控制台导入 JSON 或 CSV 数据。
-4. 初始导入时建议将 `verified` 设置为 `false`，`boundOpenid` 设置为 `null`。
+使用者需要自行导入班级成员数据到 `class_members` 集合。
 
 示例：
 
@@ -83,9 +106,11 @@
 }
 ```
 
-## 创建管理员邀请码
+请不要把真实学生姓名和学号提交到开源仓库。
 
-在 `admin_invite_codes` 集合中创建一次性邀请码。
+## 6. 创建邀请码
+
+使用者需要自行创建管理员/超级管理员邀请码，并写入 `admin_invite_codes` 集合。
 
 管理员邀请码示例：
 
@@ -95,10 +120,8 @@
   "role": "admin",
   "used": false,
   "usedByOpenid": null,
-  "usedByName": null,
-  "usedByStudentId": null,
   "usedAt": null,
-  "createdAt": "2026-05-31T00:00:00.000Z",
+  "createdAt": "2026-06-01T00:00:00.000Z",
   "expiredAt": "2026-12-31T23:59:59.000Z"
 }
 ```
@@ -111,25 +134,32 @@
   "role": "superAdmin",
   "used": false,
   "usedByOpenid": null,
-  "usedByName": null,
-  "usedByStudentId": null,
   "usedAt": null,
-  "createdAt": "2026-05-31T00:00:00.000Z",
+  "createdAt": "2026-06-01T00:00:00.000Z",
   "expiredAt": "2026-12-31T23:59:59.000Z"
 }
 ```
 
-## 测试功能
+邀请码应设置过期时间，并且只能使用一次。
 
-建议按以下顺序测试：
+## 7. 配置订阅消息
 
-1. 编译并打开小程序首页。
-2. 使用示例班级成员数据完成身份认证。
-3. 使用管理员邀请码开通管理员权限。
-4. 发布一条测试事项。
-5. 测试首页分类筛选、状态筛选和搜索。
-6. 进入详情页，测试图片预览、附件打开、链接复制。
-7. 测试收藏和我的收藏页。
-8. 测试编辑、删除、置顶和取消置顶。
-9. 授权订阅消息后发布事项，测试订阅消息发送。
-10. 打开我发布的事项页面，确认列表展示正常。
+使用者需要在微信公众平台配置订阅消息模板，并将模板 ID 填入：
+
+- `miniprogram/config.js`
+- `cloudfunctions/sendNoticeMessage/config.js`
+- `cloudfunctions/saveNoticeSubscriber/config.js`
+
+开源仓库只保留 example 配置，不包含真实模板 ID。
+
+## 8. 发布前检查
+
+发布前建议检查：
+
+- 所有云函数已部署。
+- 数据库集合已创建。
+- `security_counters` 和 `operation_logs` 已创建且权限收紧。
+- 班级成员数据已导入。
+- 管理员/超级管理员邀请码已创建。
+- 订阅消息模板 ID 已配置。
+- 开源仓库中没有真实 AppID、云环境 ID、模板 ID、openid、真实学生信息、真实邀请码或 `cloud://` 文件地址。

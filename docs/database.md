@@ -13,16 +13,19 @@
 | `_id` | 云数据库自动生成的记录 ID |
 | `title` | 事项标题 |
 | `category` | 事项分类 |
-| `status` | 事项状态，例如 `pending`、`done` |
+| `status` | 事项状态，例如 `published` |
 | `content` | 事项正文说明 |
 | `deadline` | 截止时间或相关时间 |
+| `endTime` | 结束时间 |
 | `location` | 地点或补充说明 |
 | `course` | 课程、活动或事项名称 |
+| `timeLabel` | 时间字段显示名称 |
 | `images` | 图片列表，通常包含 `fileID`、`name` 等字段 |
-| `attachments` | 附件列表，通常包含 `fileID`、`name`、`type` 等字段 |
+| `attachments` | 附件列表，通常包含 `fileID`、`name`、`size`、`type` 等字段 |
 | `links` | 相关链接列表 |
 | `publisherOpenid` | 发布人的 openid |
 | `publisherName` | 发布人显示名称 |
+| `isImportant` | 是否重要 |
 | `pinned` | 是否置顶 |
 | `createdAt` | 创建时间 |
 | `updatedAt` | 更新时间 |
@@ -33,11 +36,13 @@
 {
   "title": "示例班会通知",
   "category": "班级通知",
-  "status": "pending",
+  "status": "published",
   "content": "这是一条示例事项，请替换为真实内容。",
   "deadline": "2026-06-10 19:00",
+  "endTime": "",
   "location": "示例教室 A101",
   "course": "班会",
+  "timeLabel": "相关时间",
   "images": [],
   "attachments": [],
   "links": [
@@ -46,8 +51,9 @@
       "url": "https://example.com"
     }
   ],
-  "publisherOpenid": "openid_example_0001",
+  "publisherOpenid": "openid_example",
   "publisherName": "示例管理员",
+  "isImportant": false,
   "pinned": false,
   "createdAt": "2026-06-01T00:00:00.000Z",
   "updatedAt": "2026-06-01T00:00:00.000Z"
@@ -75,7 +81,7 @@
 
 ```json
 {
-  "openid": "openid_example_0001",
+  "openid": "openid_example",
   "name": "示例学生",
   "studentId": "2026000000",
   "role": "user",
@@ -98,8 +104,6 @@
 | `role` | 邀请码授予的角色，支持 `admin`、`superAdmin` |
 | `used` | 是否已使用 |
 | `usedByOpenid` | 使用者 openid |
-| `usedByName` | 使用者姓名 |
-| `usedByStudentId` | 使用者学号 |
 | `usedAt` | 使用时间 |
 | `createdAt` | 创建时间 |
 | `expiredAt` | 过期时间 |
@@ -112,10 +116,8 @@
   "role": "admin",
   "used": false,
   "usedByOpenid": null,
-  "usedByName": null,
-  "usedByStudentId": null,
   "usedAt": null,
-  "createdAt": "2026-05-31T00:00:00.000Z",
+  "createdAt": "2026-06-01T00:00:00.000Z",
   "expiredAt": "2026-12-31T23:59:59.000Z"
 }
 ```
@@ -128,10 +130,8 @@
   "role": "superAdmin",
   "used": false,
   "usedByOpenid": null,
-  "usedByName": null,
-  "usedByStudentId": null,
   "usedAt": null,
-  "createdAt": "2026-05-31T00:00:00.000Z",
+  "createdAt": "2026-06-01T00:00:00.000Z",
   "expiredAt": "2026-12-31T23:59:59.000Z"
 }
 ```
@@ -186,8 +186,8 @@
 
 ```json
 {
-  "openid": "openid_example_0001",
-  "templateId": "template_example_0001",
+  "openid": "openid_example",
+  "templateId": "template_example",
   "used": false,
   "enabled": true,
   "createdAt": "2026-06-01T00:00:00.000Z",
@@ -212,8 +212,71 @@
 
 ```json
 {
-  "openid": "openid_example_0001",
-  "noticeId": "notice_example_0001",
+  "openid": "openid_example",
+  "noticeId": "notice_example",
+  "createdAt": "2026-06-01T00:00:00.000Z"
+}
+```
+
+## security_counters
+
+用途：使用固定时间桶记录发布、编辑、邀请码尝试等频率限制计数。该集合应只允许云函数写入，普通用户不应直接写入。
+
+主要字段：
+
+| 字段 | 含义 |
+| --- | --- |
+| `_id` | 由动作、openid 和时间桶组成的确定性记录 ID |
+| `openid` | 操作用户 openid |
+| `action` | 计数动作，例如 `create_notice`、`update_notice`、`apply_admin_attempt` |
+| `count` | 当前时间桶内的计数值 |
+| `windowStart` | 当前固定时间桶的开始时间 |
+| `windowMs` | 时间桶长度，单位毫秒 |
+| `expiresAt` | 建议清理该计数记录的时间 |
+| `createdAt` | 创建时间 |
+| `updatedAt` | 更新时间 |
+
+示例数据：
+
+```json
+{
+  "openid": "openid_example",
+  "action": "create_notice",
+  "count": 1,
+  "windowStart": "2026-06-01T00:00:00.000Z",
+  "windowMs": 60000,
+  "expiresAt": "2026-06-01T00:02:00.000Z",
+  "createdAt": "2026-06-01T00:00:00.000Z",
+  "updatedAt": "2026-06-01T00:00:00.000Z"
+}
+```
+
+## operation_logs
+
+用途：记录身份认证、管理员授权、事项发布、编辑、删除等关键操作日志。日志中不应保存正文原文、完整邀请码、真实敏感配置或完整请求事件。
+
+主要字段：
+
+| 字段 | 含义 |
+| --- | --- |
+| `_id` | 云数据库自动生成的记录 ID |
+| `openid` | 操作用户 openid |
+| `role` | 操作时用户角色 |
+| `action` | 操作类型，例如 `verify_member`、`apply_admin`、`create_notice`、`update_notice`、`delete_notice` |
+| `targetType` | 操作目标类型 |
+| `targetId` | 操作目标 ID |
+| `success` | 操作是否成功 |
+| `detail` | 脱敏后的扩展信息，不包含姓名、学号、正文或完整邀请码 |
+| `createdAt` | 创建时间 |
+
+示例数据：
+
+```json
+{
+  "openid": "openid_example",
+  "action": "create_notice",
+  "role": "admin",
+  "success": true,
   "createdAt": "2026-06-01T00:00:00.000Z"
 }
 ```

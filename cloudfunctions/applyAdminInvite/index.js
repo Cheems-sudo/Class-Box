@@ -5,64 +5,148 @@ cloud.init({
 });
 
 const db = cloud.database();
+const inviteAttemptWindow = 10 * 60 * 1000;
+const maxInviteAttempts = 5;
 
-const fail = (message) => ({
-  success: false,
-  message,
-});
-
-const success = (message) => ({
-  success: true,
-  message,
-});
+const fail = (message) => ({ success: false, message });
+const success = (message) => ({ success: true, message });
 
 const getTargetRole = (role) => (String(role || "").trim() === "superAdmin" ? "superAdmin" : "admin");
 const getUserRole = (role) => {
   const value = String(role || "").trim();
 
-  if (value === "superAdmin" || value === "admin") {
-    return value;
-  }
+  return value === "superAdmin" || value === "admin" ? value : "user";
+};
 
-  return "user";
+const getCodePrefix = (inviteCode) => {
+  const value = String(inviteCode || "").trim().toUpperCase();
+
+  if (value.startsWith("SUPER-")) return "SUPER-";
+  if (value.startsWith("BW-")) return "BW-";
+  if (value.startsWith("ADMIN-")) return "ADMIN-";
+  return "OTHER";
+};
+
+const logSafeError = (action, error) => {
+  console.error(action, {
+    type: error && error.name ? error.name : "Error",
+    code: Number(error && (error.errCode !== undefined ? error.errCode : error.errcode)),
+  });
+};
+
+const consumeInviteAttempt = async (openid) => {
+  const action = "apply_admin_attempt";
+  const bucketStart =
+    Math.floor(Date.now() / inviteAttemptWindow) * inviteAttemptWindow;
+  const safeOpenid = openid.replace(/[^a-zA-Z0-9_-]/g, "_");
+  const counterId = `${action}_${safeOpenid}_${bucketStart}`;
+
+  return db.runTransaction(async (transaction) => {
+    let counter = null;
+
+    try {
+      const result = await transaction
+        .collection("security_counters")
+        .doc(counterId)
+        .get();
+      counter = result.data;
+    } catch (error) {
+      counter = null;
+    }
+
+    const count = Number(counter && counter.count) || 0;
+
+    if (count >= maxInviteAttempts) {
+      return false;
+    }
+
+    const now = new Date();
+    const data = {
+      openid,
+      action,
+      count: count + 1,
+      windowStart: new Date(bucketStart),
+      windowMs: inviteAttemptWindow,
+      updatedAt: now,
+      expiresAt: new Date(bucketStart + inviteAttemptWindow * 2),
+    };
+
+    if (counter) {
+      await transaction
+        .collection("security_counters")
+        .doc(counterId)
+        .update({ data });
+    } else {
+      await transaction
+        .collection("security_counters")
+        .doc(counterId)
+        .set({
+          data: {
+            ...data,
+            createdAt: now,
+          },
+        });
+    }
+
+    return true;
+  });
+};
+
+const writeOperationLog = async (actor, data) => {
+  try {
+    await db.collection("operation_logs").add({
+      data: {
+        openid: actor.openid,
+        role: data.role || getUserRole(actor.role),
+        action: "apply_admin",
+        success: data.success === true,
+        targetType: "user",
+        targetId: actor.openid,
+        detail: {
+          codePrefix: data.codePrefix,
+          requestedRole: data.requestedRole || "",
+          success: data.success === true,
+          reason: data.reason,
+        },
+        createdAt: new Date(),
+      },
+    });
+  } catch (error) {
+    logSafeError("applyAdminInvite operation log failed", error);
+  }
+};
+
+const recordInviteFailure = async (actor, inviteCode, reason, requestedRole = "") => {
+  const codePrefix = getCodePrefix(inviteCode);
+
+  await writeOperationLog(actor, {
+    codePrefix,
+    requestedRole,
+    success: false,
+    reason,
+  });
 };
 
 const parseExpireTime = (value) => {
-  if (!value) {
-    return null;
-  }
-
-  if (value instanceof Date) {
-    return value;
-  }
+  if (!value) return null;
+  if (value instanceof Date) return value;
 
   const date = new Date(value);
 
-  if (Number.isNaN(date.getTime())) {
-    return null;
-  }
-
-  return date;
+  return Number.isNaN(date.getTime()) ? null : date;
 };
 
 exports.main = async (event = {}) => {
   try {
-    const wxContext = cloud.getWXContext();
-    const openid = wxContext.OPENID;
+    const openid = cloud.getWXContext().OPENID;
     const inviteCode = String(event.inviteCode || "").trim();
 
     if (!openid) {
       return fail("请先完成班级身份验证");
     }
 
-    if (!inviteCode) {
-      return fail("请输入管理员邀请码");
-    }
-
     const userRes = await db.collection("users")
-      .where({
-        openid,
-      })
+      .where({ openid })
       .get();
     const existingUsers = userRes.data || [];
     const existingSuperAdmin = existingUsers.find((user) => getUserRole(user.role) === "superAdmin");
@@ -79,26 +163,47 @@ exports.main = async (event = {}) => {
       return fail("身份信息异常，请重新完成班级身份验证");
     }
 
+    const actor = {
+      openid,
+      name,
+      studentId,
+      role: existingUser.role,
+    };
+
+    try {
+      const allowed = await consumeInviteAttempt(openid);
+
+      if (!allowed) {
+        return fail("尝试次数过多，请稍后再试");
+      }
+    } catch (error) {
+      logSafeError("applyAdminInvite counter write failed", error);
+      return fail("邀请码校验失败，请稍后再试");
+    }
+
+    if (!inviteCode) {
+      await recordInviteFailure(actor, inviteCode, "invalid_format");
+      return fail("邀请码不存在或已被使用");
+    }
+
     const inviteRes = await db.collection("admin_invite_codes")
-      .where({
-        code: inviteCode,
-        used: false,
-      })
+      .where({ code: inviteCode, used: false })
       .limit(1)
       .get();
 
     if (inviteRes.data.length === 0) {
+      await recordInviteFailure(actor, inviteCode, "not_found_or_used");
       return fail("邀请码不存在或已被使用");
     }
 
     const invite = inviteRes.data[0];
+    const targetRole = getTargetRole(invite.role);
     const expiredAt = parseExpireTime(invite.expiredAt);
 
     if (expiredAt && expiredAt.getTime() < Date.now()) {
+      await recordInviteFailure(actor, inviteCode, "expired", targetRole);
       return fail("邀请码不存在或已被使用");
     }
-
-    const targetRole = getTargetRole(invite.role);
 
     if (existingSuperAdmin) {
       return success("你已是超级管理员");
@@ -110,21 +215,17 @@ exports.main = async (event = {}) => {
 
     const now = new Date();
     const updateRes = await db.collection("admin_invite_codes")
-      .where({
-        _id: invite._id,
-        used: false,
-      })
+      .where({ _id: invite._id, used: false })
       .update({
         data: {
           used: true,
           usedByOpenid: openid,
-          usedByName: name,
-          usedByStudentId: studentId,
           usedAt: now,
         },
       });
 
     if (!updateRes.stats || updateRes.stats.updated !== 1) {
+      await recordInviteFailure(actor, inviteCode, "not_found_or_used", targetRole);
       return fail("邀请码不存在或已被使用");
     }
 
@@ -142,9 +243,17 @@ exports.main = async (event = {}) => {
         },
       });
 
+    await writeOperationLog(actor, {
+      codePrefix: getCodePrefix(inviteCode),
+      requestedRole: targetRole,
+      role: targetRole,
+      success: true,
+      reason: "granted",
+    });
+
     return success(targetRole === "superAdmin" ? "超级管理员权限开通成功" : "管理员权限开通成功");
   } catch (error) {
-    console.error("applyAdminInvite failed", error);
+    logSafeError("applyAdminInvite failed", error);
     return fail("邀请码不存在或已被使用");
   }
 };

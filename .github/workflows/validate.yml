@@ -1,0 +1,57 @@
+name: Validate
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Check JavaScript syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r -d '' file; do
+            node --check "$file"
+          done < <(find cloudfunctions miniprogram -type f -name '*.js' -print0)
+
+      - name: Validate JSON
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require("fs");
+          const path = require("path");
+
+          function walk(directory) {
+            for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+              if ([".git", "node_modules", "miniprogram_npm"].includes(entry.name)) continue;
+              const target = path.join(directory, entry.name);
+              if (entry.isDirectory()) walk(target);
+              if (entry.isFile() && entry.name.endsWith(".json")) {
+                JSON.parse(fs.readFileSync(target, "utf8"));
+              }
+            }
+          }
+
+          walk(".");
+          NODE
+
+      - name: Check tracked sensitive configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          forbidden='^(project\.config\.json|project\.private\.config\.json|miniprogram/config\.js|cloudfunctions/(sendNoticeMessage|saveNoticeSubscriber)/config\.js)$'
+          if git ls-files | grep -E "$forbidden"; then
+            echo "Tracked sensitive configuration found."
+            exit 1
+          fi

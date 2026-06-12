@@ -28,11 +28,16 @@ exports.main = async () => {
       .get();
 
     const users = adminRes.data || [];
-    const isSuperAdmin = users.some((user) => normalizeRole(user.role) === "superAdmin");
-    const isRegularAdmin = users.some((user) => normalizeRole(user.role) === "admin");
+    const verifiedUsers = users.filter((item) => item.verified === true);
+    const isSuperAdmin = verifiedUsers.some(
+      (user) => normalizeRole(user.role) === "superAdmin"
+    );
+    const isRegularAdmin = verifiedUsers.some(
+      (user) => normalizeRole(user.role) === "admin"
+    );
     const isAdmin = isSuperAdmin || isRegularAdmin;
     const role = isSuperAdmin ? "superAdmin" : (isRegularAdmin ? "admin" : "user");
-    const user = users.find((item) => item.verified === true) || users[0] || {};
+    const user = verifiedUsers[0] || users[0] || {};
     const verified = user.verified === true;
 
     return {
@@ -46,7 +51,13 @@ exports.main = async () => {
       studentId: verified ? (user.studentId || "") : "",
     };
   } catch (error) {
-    console.error("checkAdmin failed", error);
+    console.error("checkAdmin failed", {
+      type: error && error.name ? error.name : "Error",
+      code: Number(
+        error &&
+          (error.errCode !== undefined ? error.errCode : error.errcode)
+      ),
+    });
     return {
       success: false,
       message: "\u8eab\u4efd\u68c0\u67e5\u5931\u8d25",

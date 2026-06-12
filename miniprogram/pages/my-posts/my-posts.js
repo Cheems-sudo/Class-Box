@@ -62,7 +62,6 @@ Page({
 
       return this.loadMyPosts(options);
     }).catch((error) => {
-      console.error("[my-posts] 身份检查失败", error);
       this.setData({
         authLoading: false,
         verified: false,
@@ -119,7 +118,6 @@ Page({
         }
       })
       .catch((error) => {
-        console.error("[my-posts] 读取我发布的事项失败", error);
         this.setData({
           noticeList: [],
           isLoading: false,

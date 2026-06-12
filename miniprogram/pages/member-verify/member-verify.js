@@ -38,10 +38,6 @@ Page({
       mask: true,
     });
 
-    console.log("[member-verify] 开始 verifyMember 身份验证", {
-      name,
-      studentId,
-    });
     wx.cloud.callFunction({
       name: "verifyMember",
       data: {
@@ -49,7 +45,6 @@ Page({
         studentId,
       },
     }).then((res) => {
-      console.log("[member-verify] verifyMember 身份验证完成", res);
       const result = res.result || {};
 
       if (!result.success) {
@@ -77,8 +72,7 @@ Page({
           url: "/pages/index/index",
         });
       }, 800);
-    }).catch((error) => {
-      console.error("[member-verify] verifyMember 身份验证失败", error);
+    }).catch(() => {
       wx.showToast({
         title: "网络超时，请稍后重试",
         icon: "none",

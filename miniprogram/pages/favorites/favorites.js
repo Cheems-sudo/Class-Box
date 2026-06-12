@@ -50,8 +50,7 @@ Page({
       }
 
       return this.loadFavorites();
-    }).catch((error) => {
-      console.error("[favorites] 身份检查失败", error);
+    }).catch(() => {
       this.setData({
         authLoading: false,
         verified: false,
@@ -117,8 +116,7 @@ Page({
             return null;
           });
       })
-      .catch((error) => {
-        console.error("[favorites] 读取收藏失败", error);
+      .catch(() => {
         this.setData({
           favoriteNotices: [],
           isLoading: false,
@@ -137,11 +135,7 @@ Page({
       .doc(noticeId)
       .get()
       .then((res) => res.data || null)
-      .catch((error) => {
-        console.error("[favorites] 收藏事项不存在或读取失败", {
-          noticeId,
-          error,
-        });
+      .catch(() => {
         return null;
       });
   },
@@ -384,8 +378,7 @@ Page({
           icon: "success",
         });
       })
-      .catch((error) => {
-        console.error("[favorites] 批量取消收藏失败", error);
+      .catch(() => {
         this.setData({
           batchLoading: false,
         });

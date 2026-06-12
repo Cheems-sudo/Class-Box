@@ -5,7 +5,6 @@ cloud.init({
 });
 
 const db = cloud.database();
-const command = db.command;
 const maxAttachmentSize = 20 * 1024 * 1024;
 const supportedAttachmentTypes = ["pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx"];
 const removableFields = ["tempFileURL", "tempFilePath", "localPath"];
@@ -28,6 +27,62 @@ const logSafeError = (action, error) => {
     type: error && error.name ? error.name : "Error",
     code: getErrorCode(error),
     rejected: Boolean(error && error.securityRejected),
+  });
+};
+
+const consumeRateLimit = async (openid, action, limit, windowMs) => {
+  const bucketStart = Math.floor(Date.now() / windowMs) * windowMs;
+  const safeOpenid = openid.replace(/[^a-zA-Z0-9_-]/g, "_");
+  const counterId = `${action}_${safeOpenid}_${bucketStart}`;
+
+  return db.runTransaction(async (transaction) => {
+    let counter = null;
+
+    try {
+      const result = await transaction
+        .collection("security_counters")
+        .doc(counterId)
+        .get();
+      counter = result.data;
+    } catch (error) {
+      counter = null;
+    }
+
+    const count = Number(counter && counter.count) || 0;
+
+    if (count >= limit) {
+      return false;
+    }
+
+    const now = new Date();
+    const data = {
+      openid,
+      action,
+      count: count + 1,
+      windowStart: new Date(bucketStart),
+      windowMs,
+      updatedAt: now,
+      expiresAt: new Date(bucketStart + windowMs * 2),
+    };
+
+    if (counter) {
+      await transaction
+        .collection("security_counters")
+        .doc(counterId)
+        .update({ data });
+    } else {
+      await transaction
+        .collection("security_counters")
+        .doc(counterId)
+        .set({
+          data: {
+            ...data,
+            createdAt: now,
+          },
+        });
+    }
+
+    return true;
   });
 };
 
@@ -244,16 +299,14 @@ const writeOperationLog = async (actor, noticeId, noticeData) => {
     await db.collection("operation_logs").add({
       data: {
         openid: actor.openid,
-        name: String(actor.name || "").trim(),
-        studentId: String(actor.studentId || "").trim(),
         role: normalizeRole(actor.role),
         action: "create_notice",
+        success: true,
         targetType: "notice",
         targetId: noticeId,
-        targetTitle: noticeData.title,
         detail: {
           category: noticeData.category,
-          timeLabel: noticeData.timeLabel,
+          success: true,
         },
         createdAt: new Date(),
       },
@@ -288,32 +341,23 @@ exports.main = async (event = {}) => {
       return fail(validation.error);
     }
 
-    const counterRes = await db.collection("security_counters")
-      .where({
-        openid,
-        action: "create_notice",
-        createdAt: command.gte(new Date(Date.now() - 60 * 1000)),
-      })
-      .count();
-
-    if ((counterRes.total || 0) >= 3) {
-      return fail("发布过于频繁，请稍后再试");
-    }
-
-    const now = new Date();
-
     try {
-      await db.collection("security_counters").add({
-        data: {
-          openid,
-          action: "create_notice",
-          createdAt: now,
-        },
-      });
+      const allowed = await consumeRateLimit(
+        openid,
+        "create_notice",
+        3,
+        60 * 1000
+      );
+
+      if (!allowed) {
+        return fail("发布过于频繁，请稍后再试");
+      }
     } catch (error) {
       logSafeError("createNotice counter write failed", error);
       return fail("发布失败，请稍后重试");
     }
+
+    const now = new Date();
 
     try {
       await checkNoticeSecurity(validation.data, openid);

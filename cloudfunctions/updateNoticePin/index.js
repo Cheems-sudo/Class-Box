@@ -34,15 +34,14 @@ const writeOperationLog = async (actor, openid, noticeId, notice, pinned) => {
     await db.collection("operation_logs").add({
       data: {
         openid,
-        name: String(actor.name || "").trim(),
-        studentId: String(actor.studentId || "").trim(),
         role: normalizeRole(actor.role),
         action: pinned ? "pin_notice" : "unpin_notice",
+        success: true,
         targetType: "notice",
         targetId: noticeId,
-        targetTitle: String(notice.title || "").trim(),
         detail: {
           pinned,
+          success: true,
         },
         createdAt: new Date(),
       },

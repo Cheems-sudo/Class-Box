@@ -32,8 +32,7 @@ Page({
         authLoading: false,
         verified: result.verified === true,
       });
-    }).catch((error) => {
-      console.error("[admin-auth] 身份检查失败", error);
+    }).catch(() => {
       this.setData({
         authLoading: false,
         verified: false,
@@ -116,8 +115,7 @@ Page({
           wx.navigateBack();
         }, 800);
       })
-      .catch((error) => {
-        console.error("开通管理员权限失败", error);
+      .catch(() => {
         this.showError("邀请码不存在或已被使用");
         this.setData({
           submitting: false,
