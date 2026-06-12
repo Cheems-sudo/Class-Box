@@ -4,12 +4,6 @@ Page({
     studentId: "",
     submitting: false,
   },
-  onShareTimeline() {
-    return {
-      title: "班级盒子｜班级事项统一查看",
-      query: "",
-    };
-  },
   onNameInput(e) {
     this.setData({
       name: e.detail.value,

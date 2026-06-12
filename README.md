@@ -4,6 +4,10 @@
 
 本仓库是开源副本，不包含正式项目的真实 AppID、云环境 ID、订阅消息模板 ID、openid、班级成员名单、管理员邀请码或云文件地址。
 
+## 项目背景
+
+这个项目最初用于解决班级通知分散在聊天记录中、不方便查找和整理的问题。开源版本保留了事项管理、成员认证、权限控制和订阅提醒等主要功能，并移除了真实班级数据与运行配置。
+
 ## 快速开始
 
 ### 1. 前置要求
@@ -15,8 +19,8 @@
 ### 2. 克隆项目
 
 ```bash
-git clone <your-repository-url>
-cd class-box-open-source
+git clone https://github.com/Cheems-sudo/Class-Box.git
+cd Class-Box
 ```
 
 ### 3. 配置文件
@@ -133,6 +137,13 @@ cp cloudfunctions/saveNoticeSubscriber/config.example.js cloudfunctions/saveNoti
 - **数据库权限**：`docs/database-permissions.md` - 各集合的最小权限建议
 - **安全建议**：`docs/security.md` - 开源和运营时的安全注意事项
 
+## 当前限制
+
+- 项目依赖微信云开发，不能脱离微信开发者工具直接运行。
+- 班级成员名单和管理员邀请码需要部署者自行导入。
+- 订阅消息模板字段需要与 `sendNoticeMessage` 中的数据结构保持一致。
+- 当前自动化检查以语法、配置和敏感信息扫描为主，页面交互仍需在微信开发者工具中测试。
+
 ## 项目结构
 
 ```text
@@ -171,7 +182,7 @@ docs/                     # 文档
 
 ## 贡献
 
-欢迎提交 Issue 和 Pull Request！
+发现问题可以直接提交 Issue。准备修改代码时，请先阅读 `CONTRIBUTING.md`。
 
 ## 许可证
 
@@ -179,5 +190,4 @@ docs/                     # 文档
 
 ## 反馈
 
-- 遇到问题？请使用本仓库的 GitHub Issues
-- 有建议？欢迎讨论和 PR
+- 问题与建议：[GitHub Issues](https://github.com/Cheems-sudo/Class-Box/issues)

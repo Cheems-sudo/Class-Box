@@ -149,12 +149,6 @@ Page({
     this.consumePendingEditNotice();
     this.checkPublishPermission();
   },
-  onShareTimeline() {
-    return {
-      title: "班级盒子｜班级事项统一查看",
-      query: "",
-    };
-  },
   checkPublishPermission() {
     this.setData({
       authLoading: true,
