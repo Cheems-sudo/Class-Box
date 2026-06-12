@@ -142,6 +142,27 @@ Page({
       url: "/pages/member-verify/member-verify",
     });
   },
+  onShareAppMessage() {
+    const detail = this.data.detail || {};
+    const titleText = String(detail.title || "").trim();
+    const noticeId = detail._id || this.pendingNoticeId || "";
+
+    return {
+      title: titleText ? `班级盒子｜${titleText}` : "班级盒子｜班级事项统一查看",
+      path: noticeId ? `/pages/detail/detail?id=${noticeId}` : "/pages/index/index",
+      desc: "班级考试、作业、活动和通知统一查看。",
+    };
+  },
+  onShareTimeline() {
+    const detail = this.data.detail || {};
+    const titleText = String(detail.title || "").trim();
+    const noticeId = detail._id || this.pendingNoticeId || "";
+
+    return {
+      title: titleText ? `班级盒子｜${titleText}` : "班级盒子｜班级事项统一查看",
+      query: noticeId ? `id=${noticeId}` : "",
+    };
+  },
   loadFavoriteStatus() {
     const detail = this.data.detail;
 

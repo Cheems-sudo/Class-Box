@@ -52,6 +52,7 @@ cp cloudfunctions/saveNoticeSubscriber/config.example.js cloudfunctions/saveNoti
 - 按考试安排、作业信息、活动信息、班级通知、其他等类型管理事项。
 - 图片、附件和链接支持。
 - 收藏事项。
+- 首页和事项详情支持好友分享与朋友圈分享。
 - 订阅消息提醒。
 - 班级成员身份认证。
 - 管理员和超级管理员权限体系。

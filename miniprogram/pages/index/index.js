@@ -25,6 +25,19 @@ Page({
       stopRefresh: true,
     });
   },
+  onShareAppMessage() {
+    return {
+      title: "班级盒子｜班级事项统一查看",
+      path: "/pages/index/index",
+      desc: "班级考试、作业、活动和通知统一查看。",
+    };
+  },
+  onShareTimeline() {
+    return {
+      title: "班级盒子｜班级事项统一查看",
+      query: "",
+    };
+  },
   checkMemberVerification(options = {}) {
     this.setData({
       authLoading: true,

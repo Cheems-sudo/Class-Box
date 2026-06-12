@@ -21,6 +21,12 @@ Page({
       stopRefresh: true,
     });
   },
+  onShareTimeline() {
+    return {
+      title: "班级盒子｜班级事项统一查看",
+      query: "",
+    };
+  },
   checkPermission(options = {}) {
     this.setData({
       authLoading: true,

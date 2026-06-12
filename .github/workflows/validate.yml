@@ -12,6 +12,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -53,5 +55,23 @@ jobs:
           forbidden='^(project\.config\.json|project\.private\.config\.json|miniprogram/config\.js|cloudfunctions/(sendNoticeMessage|saveNoticeSubscriber)/config\.js)$'
           if git ls-files | grep -E "$forbidden"; then
             echo "Tracked sensitive configuration found."
+            exit 1
+          fi
+
+      - name: Scan Git history for high-confidence secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          patterns='wx[0-9a-fA-F]{16}|cloud://[A-Za-z0-9]|cloud[0-9]+-[a-z0-9-]{8,}|-----BEGIN ([A-Z ]+)?PRIVATE KEY-----'
+          found=0
+
+          while IFS= read -r commit; do
+            if git grep -I -n -E "$patterns" "$commit" --; then
+              found=1
+            fi
+          done < <(git rev-list --all)
+
+          if [ "$found" -ne 0 ]; then
+            echo "Potential secret found in Git history."
             exit 1
           fi
