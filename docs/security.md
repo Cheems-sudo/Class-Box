@@ -1,39 +1,32 @@
-# 开源安全注意事项
+# 安全与隐私建议
 
-本仓库是班级盒子的开源副本，不能包含正式项目或真实班级环境的敏感信息。
+班级盒子会处理班级成员身份、通知内容、收藏记录、订阅授权和管理员权限。自行部署时，建议把它当作一个真实班级系统来配置，而不只是一个演示小程序。
 
-## 不应提交的内容
+这份文档面向部署者和运营者，重点说明哪些数据需要保护、哪些操作必须走云函数、日志应该如何脱敏，以及哪些配置不能公开。
 
-开源仓库不得包含：
+## 需要重点保护的数据
 
-- 真实 AppID
-- 真实云环境 ID
-- 真实订阅消息模板 ID
-- openid
-- unionid
-- 真实学生姓名
-- 真实学生学号
-- 真实管理员邀请码
-- 真实超级管理员邀请码
-- `cloud://` 文件地址
-- `access_token`
-- `secret`
-- `key`
-- `password`
-- `token`
+以下数据不应公开，也不应出现在仓库、截图、日志或演示数据中：
 
-如需展示结构，请使用 `example`、`your-*`、`openid_example` 等占位值。
+- 小程序 AppID、云环境 ID、订阅消息模板 ID。
+- 用户 openid、unionid。
+- 真实学生姓名和学号。
+- 管理员和超级管理员邀请码。
+- `cloud://` 云文件地址和云存储 fileID。
+- `access_token`、`secret`、`key`、`password`、`token` 等凭据。
 
-## 配置文件
+如需展示示例，请使用 `example`、`your-*`、`openid_example` 这类占位值。
 
-只提交 example 配置：
+## 本地配置文件
+
+仓库只应提交 example 配置：
 
 - `project.config.example.json`
 - `miniprogram/config.example.js`
 - `cloudfunctions/sendNoticeMessage/config.example.js`
 - `cloudfunctions/saveNoticeSubscriber/config.example.js`
 
-不要提交真实配置：
+以下文件只属于本地部署环境，不应提交：
 
 - `project.private.config.json`
 - `project.config.json`
@@ -41,19 +34,24 @@
 - `cloudfunctions/sendNoticeMessage/config.js`
 - `cloudfunctions/saveNoticeSubscriber/config.js`
 
-## 运行安全建议
+这些文件已写入 `.gitignore`，正常情况下 Git 会自动忽略。
 
-- 不要只依赖前端判断权限。
-- 发布、编辑、删除等关键操作应通过云函数执行。
-- 内容安全检测应在云函数侧完成。
-- 图片上传应进行图片内容安全检测。
-- 操作日志不应记录真实敏感内容原文。
-- 不要记录完整邀请码。
-- 不要在 `console.log` / `console.error` 中输出完整 `event`。
-- `security_counters` 和 `operation_logs` 不应允许普通用户直接写入。
-- `subscribers` 不应允许普通用户直接读写，订阅授权通过云函数保存。
-- 数据库权限应尽量收紧。
-- 邀请码应设置过期时间，并且只能使用一次。
+## 权限边界
+
+不要只依赖前端判断权限。前端可以决定按钮是否显示，但不能作为安全边界。
+
+以下操作应始终通过云函数完成：
+
+- 成员身份认证。
+- 管理员邀请码校验。
+- 发布事项。
+- 编辑事项。
+- 删除事项。
+- 更新置顶状态。
+- 保存订阅授权。
+- 发送订阅消息。
+
+普通用户不应直接写入 `notices`、`subscribers`、`security_counters`、`operation_logs` 等关键集合。数据库权限建议见 [database-permissions.md](database-permissions.md)。
 
 ## 数据库安全
 
@@ -62,56 +60,63 @@
 - `class_members`：包含班级成员姓名、学号和绑定状态。
 - `users`：包含用户 openid、认证状态和权限角色。
 - `admin_invite_codes`：包含管理员/超级管理员邀请码。
-- `security_counters`：包含安全计数和失败记录。
+- `subscribers`：包含订阅消息授权记录。
+- `security_counters`：包含频率限制计数和失败记录。
 - `operation_logs`：包含关键操作日志。
 
-普通用户不应直接写入 `subscribers`、`security_counters` 和 `operation_logs`。管理员授权、发布、编辑、删除等敏感操作应由云函数进行权限校验后执行。具体权限目标见 `docs/database-permissions.md`。
+建议做法：
+
+- `class_members` 和 `admin_invite_codes` 不对普通用户开放直接读写。
+- `subscribers` 只通过 `saveNoticeSubscriber` 写入。
+- `security_counters` 只由云函数维护。
+- `operation_logs` 只由云函数写入，普通用户不可直接读取。
+- 根据运营需要定期清理过期的 `security_counters` 和历史 `operation_logs`。
 
 ## 邀请码安全
 
-- 邀请码只应在云数据库中保存和校验。
-- 邀请码应设置 `expiredAt`。
-- 邀请码使用后必须标记为 `used: true`。
-- 操作日志中不要保存完整邀请码。
-- 如需记录授权来源，只记录 `codePrefix`、角色、成功/失败状态和失败原因。
+管理员邀请码相当于提权凭证，应按敏感数据处理。
+
+建议：
+
+- 邀请码只保存在云数据库中，并通过云函数校验。
+- 邀请码设置 `expiredAt`。
+- 邀请码使用后立即标记为 `used: true`。
+- 不在前端、日志或报错信息中展示完整邀请码。
+- 如需记录授权来源，只记录角色、成功/失败状态、失败原因和脱敏后的 `codePrefix`。
 
 ## 日志安全
 
 日志用于排查问题和审计关键操作，但不应成为敏感信息泄露点。
 
-建议：
+建议不要记录：
 
-- 不记录完整请求 `event`。
-- 不记录事项正文原文。
-- 不在操作日志中重复保存姓名和学号。
-- 不记录附件 `fileID` 或云文件地址。
-- 不记录完整邀请码。
-- 不记录真实配置值。
-- 错误日志只记录错误类型、错误码、操作类型和脱敏后的上下文。
-- 为操作日志设置合理的保留周期，过期后及时清理。
+- 完整请求 `event`。
+- 事项正文原文。
+- 真实姓名和学号。
+- 附件 fileID 或 `cloud://` 地址。
+- 完整邀请码。
+- 真实配置值。
+
+错误日志建议只记录错误类型、错误码、操作类型和脱敏后的上下文。
 
 ## 内容安全
 
-发布和编辑事项时应在云函数侧执行内容安全检测：
+发布和编辑事项时，应在云函数侧执行内容安全检测。前端检测只能优化体验，不能作为唯一安全边界。
 
-- 文本内容检测。
-- 链接标题和链接地址检测。
-- 图片文件内容检测。
-- 图片和附件名称检测。
+建议检测：
 
-前端检测只能作为用户体验优化，不能作为唯一安全边界。
+- 标题和正文。
+- 链接标题和链接地址。
+- 图片内容。
+- 图片和附件名称。
 
-## 开源前检查清单
+## 发布前检查
 
-发布或同步到开源仓库前，建议检查：
+部署或公开分享项目前，建议检查：
 
-1. 搜索真实 AppID。
-2. 搜索真实云环境 ID。
-3. 搜索真实订阅消息模板 ID。
-4. 搜索 openid / unionid。
-5. 搜索真实学生姓名和学号。
-6. 搜索真实邀请码。
-7. 搜索 `cloud://` 和云存储 fileID。
-8. 搜索 `access_token`、`secret`、`key`、`password`、`token`。
-9. 确认真实配置文件没有被 Git 跟踪。
-10. 确认 README 和 docs 中只使用假数据或 example 数据。
+- 真实配置文件没有被 Git 跟踪。
+- README 和 docs 中只使用占位数据。
+- 仓库中没有真实 AppID、云环境 ID、模板 ID。
+- 仓库中没有真实 openid、学生信息、邀请码。
+- 仓库中没有 `cloud://` 文件地址或云存储 fileID。
+- 数据库权限已经按最小权限配置，并用普通用户账号测试过。

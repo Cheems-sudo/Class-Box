@@ -1,193 +1,126 @@
 # 班级盒子
 
-班级盒子是一个面向班级场景的微信小程序，用于统一发布和查看考试、作业、活动、通知、资料等班级事项。
+班级盒子是一个面向班级日常事务的微信小程序。它把考试安排、作业信息、活动通知、班级公告、资料链接等内容集中到一个地方，让同学不用再从聊天记录里反复翻找重要信息。
 
-本仓库是开源副本，不包含正式项目的真实 AppID、云环境 ID、订阅消息模板 ID、openid、班级成员名单、管理员邀请码或云文件地址。
+这个项目适合班级、社团、学习小组或课程团队使用：管理员负责发布和维护事项，成员完成身份认证后即可查看、收藏和订阅提醒。
 
-## 项目背景
+## 它能解决什么
 
-这个项目最初用于解决班级通知分散在聊天记录中、不方便查找和整理的问题。开源版本保留了事项管理、成员认证、权限控制和订阅提醒等主要功能，并移除了真实班级数据与运行配置。
+班级信息常常散落在群聊、私聊、文件和截图里。时间一久，考试时间、作业截止日期、活动地点、通知原文都容易被新的消息淹没。
 
-## 快速开始
+班级盒子提供一个更稳定的入口：
 
-### 1. 前置要求
+- 重要事项统一发布，按类型整理。
+- 每条事项有清晰的时间、地点、课程/活动名称和详细说明。
+- 支持图片、附件和外部链接，资料不再只靠聊天记录转发。
+- 成员可以收藏事项，也可以订阅下一次通知提醒。
+- 管理员可以编辑、删除、置顶自己有权限管理的内容。
+
+## 主要功能
+
+- 班级事项：发布、查看、编辑、删除、置顶。
+- 分类管理：考试安排、作业信息、活动信息、班级通知、其他。
+- 资料补充：支持图片、附件和链接。
+- 收藏列表：保存自己关心的事项。
+- 消息提醒：通过微信订阅消息提醒下一条通知。
+- 身份认证：只允许班级成员进入主要功能。
+- 权限管理：普通成员、管理员、超级管理员分层使用。
+- 安全校验：发布和编辑内容会经过内容安全检测。
+- 操作记录：关键操作会写入日志，便于后续追踪。
+
+## 使用角色
+
+| 角色 | 可以做什么 |
+| --- | --- |
+| 未认证用户 | 只能进行班级身份认证 |
+| 已认证成员 | 查看事项、收藏事项、订阅提醒 |
+| 管理员 | 发布事项，管理自己发布的事项 |
+| 超级管理员 | 管理所有事项和关键内容 |
+
+## 页面概览
+
+- 首页：浏览和筛选班级事项。
+- 详情页：查看事项内容、图片、附件、链接，并进行收藏。
+- 发布页：管理员发布或编辑事项。
+- 我的：查看身份状态、订阅提醒、进入收藏和我的发布。
+- 成员认证：填写姓名和学号完成班级身份认证。
+- 管理员认证：通过一次性邀请码开通管理员权限。
+
+## 自行部署
+
+本仓库是开源版本，不包含正式项目的真实 AppID、云环境 ID、订阅消息模板 ID、openid、班级成员名单、管理员邀请码或云文件地址。
+
+如果你想部署自己的班级盒子，需要准备：
 
 - 微信开发者工具
-- 自己的微信小程序 AppID
-- 云开发环境
+- 微信小程序 AppID
+- 微信云开发环境
+- 订阅消息模板
+- 班级成员名单
+- 管理员或超级管理员邀请码
 
-### 2. 克隆项目
+快速步骤：
 
 ```bash
 git clone https://github.com/Cheems-sudo/Class-Box.git
 cd Class-Box
-```
-
-### 3. 配置文件
-
-复制配置文件模板：
-
-```bash
 cp project.config.example.json project.config.json
 cp miniprogram/config.example.js miniprogram/config.js
 cp cloudfunctions/sendNoticeMessage/config.example.js cloudfunctions/sendNoticeMessage/config.js
 cp cloudfunctions/saveNoticeSubscriber/config.example.js cloudfunctions/saveNoticeSubscriber/config.js
 ```
 
-然后编辑这些文件，填入自己的：
+然后在这些本地配置文件中填入自己的 AppID、云环境 ID 和订阅消息模板 ID，再使用微信开发者工具打开项目并部署云函数。
 
-- AppID
-- 云环境 ID
-- 订阅消息模板 ID
+完整部署步骤见 [docs/deploy.md](docs/deploy.md)。
 
-### 4. 部署
+## 数据与安全
 
-1. 在微信开发者工具中打开此项目。
-2. 进入“云开发” → “云函数”。
-3. 右键 `cloudfunctions` 文件夹，选择“增量上传并部署”，部署所有云函数。
-4. 创建数据库集合，见 `docs/database.md` 了解详情。
-5. 点击“预览”在微信中测试。
+班级盒子依赖微信云开发数据库。你需要自行创建以下集合：
 
-详细步骤见 `docs/deploy.md`。
+- `notices`
+- `users`
+- `admin_invite_codes`
+- `class_members`
+- `subscribers`
+- `favorites`
+- `security_counters`
+- `operation_logs`
 
-## 功能特性
+数据库字段说明见 [docs/database.md](docs/database.md)，权限建议见 [docs/database-permissions.md](docs/database-permissions.md)。
 
-- 班级事项发布、编辑、删除和查看。
-- 按考试安排、作业信息、活动信息、班级通知、其他等类型管理事项。
-- 图片、附件和链接支持。
-- 收藏事项。
-- 首页和事项详情支持好友分享与朋友圈分享。
-- 订阅消息提醒。
-- 班级成员身份认证。
-- 管理员和超级管理员权限体系。
-- 管理员/超级管理员邀请码为一次性使用。
-- 发布事项通过 `createNotice` 云函数完成，避免前端直接写入关键集合。
-- 发布/编辑内容进行内容安全检测。
-- 图片内容安全检测。
-- 关键操作日志记录。
-- 敏感操作通过云函数进行权限校验。
+部署前的隐私和权限配置建议见 [docs/security.md](docs/security.md)。
 
-## 权限角色
+## 技术说明
 
-- 未认证用户：只能进行班级身份认证，不能正常使用主要功能。
-- 已认证普通用户：可以查看事项、收藏事项、订阅提醒。
-- 已认证管理员：可以发布事项，并管理自己发布的事项。
-- 已认证超级管理员：可以管理所有事项。
+项目由微信小程序前端和微信云函数组成。
 
-## 云函数
+```text
+miniprogram/      # 小程序页面、样式和配置
+cloudfunctions/   # 权限校验、事项管理、订阅提醒等云函数
+docs/             # 部署、数据库和安全文档
+```
 
-当前项目使用以下云函数：
+主要云函数包括：
 
-| 云函数 | 说明 |
-| --- | --- |
-| `applyAdminInvite` | 处理一次性管理员/超级管理员邀请码 |
-| `checkAdmin` | 判断当前用户身份、认证状态和权限 |
-| `contentSecurityCheck` | 对文本、图片等内容进行安全检测 |
-| `createNotice` | 通过云函数创建事项，避免前端直接写入关键集合 |
-| `deleteNotice` | 删除事项，并进行权限校验 |
-| `saveNoticeSubscriber` | 校验当前用户并保存订阅授权，避免前端直接写入订阅集合 |
-| `sendNoticeMessage` | 发送订阅消息提醒 |
-| `updateNotice` | 编辑事项，并进行权限校验 |
-| `updateNoticePin` | 更新事项置顶状态，并进行权限校验 |
-| `verifyMember` | 班级成员身份认证 |
-
-说明：发布、编辑、删除、置顶和管理员授权等关键业务操作均由对应业务云函数完成权限校验，并在业务成功后直接记录操作日志。
-
-## 配置
-
-### 敏感信息
-
-本仓库不包含真实的 AppID、云环境 ID、邀请码等敏感信息。如需自行部署，请参考 `docs/security.md` 的“不应提交的内容”章节。
-
-### 配置文件
-
-复制并填写以下配置文件：
-
-1. **`project.config.json`** - 微信开发者工具配置
-   - 源文件：`project.config.example.json`
-   - 需填写：`appid`（你的小程序 AppID）
-
-2. **`miniprogram/config.js`** - 小程序配置
-   - 源文件：`miniprogram/config.example.js`
-   - 需填写：`envId`（云开发环境 ID）、`subscribeTemplateId`（订阅消息模板 ID）
-
-3. **`cloudfunctions/sendNoticeMessage/config.js`** - 消息发送配置
-   - 源文件：`cloudfunctions/sendNoticeMessage/config.example.js`
-   - 需填写：订阅消息相关配置
-
-4. **`cloudfunctions/saveNoticeSubscriber/config.js`** - 订阅保存配置
-   - 源文件：`cloudfunctions/saveNoticeSubscriber/config.example.js`
-   - 需填写：与前端一致的订阅消息模板 ID
-
-### 不要提交以下文件
-
-- `project.private.config.json`
-- `project.config.json`
-- `miniprogram/config.js`
-- `cloudfunctions/sendNoticeMessage/config.js`
-- `cloudfunctions/saveNoticeSubscriber/config.js`
-
-这些文件已在 `.gitignore` 中，Git 会自动忽略它们。
-
-## 文档
-
-- **快速开始**：见上方“快速开始”章节
-- **部署指南**：`docs/deploy.md` - 详细的部署步骤
-- **数据库设计**：`docs/database.md` - 8 个集合的字段说明和示例数据
-- **数据库权限**：`docs/database-permissions.md` - 各集合的最小权限建议
-- **安全建议**：`docs/security.md` - 开源和运营时的安全注意事项
+- `checkAdmin`：检查当前用户认证状态和权限。
+- `verifyMember`：完成班级成员身份认证。
+- `createNotice` / `updateNotice` / `deleteNotice`：管理事项。
+- `updateNoticePin`：更新置顶状态。
+- `contentSecurityCheck`：内容安全检测。
+- `saveNoticeSubscriber` / `sendNoticeMessage`：保存订阅授权并发送提醒。
+- `applyAdminInvite`：处理管理员邀请码。
 
 ## 当前限制
 
-- 项目依赖微信云开发，不能脱离微信开发者工具直接运行。
-- 班级成员名单和管理员邀请码需要部署者自行导入。
-- 订阅消息模板字段需要与 `sendNoticeMessage` 中的数据结构保持一致。
-- 当前自动化检查以语法、配置和敏感信息扫描为主，页面交互仍需在微信开发者工具中测试。
-
-## 项目结构
-
-```text
-cloudfunctions/           # 云函数后端（10个）
-├── checkAdmin/           # 检查用户权限和认证状态
-├── createNotice/         # 创建班级事项
-├── updateNotice/         # 编辑班级事项
-├── updateNoticePin/      # 更新事项置顶状态
-├── deleteNotice/         # 删除班级事项
-├── verifyMember/         # 班级成员身份认证
-├── contentSecurityCheck/ # 内容安全检测（文本+图片）
-├── saveNoticeSubscriber/ # 保存当前用户的订阅授权
-├── sendNoticeMessage/    # 发送订阅消息通知
-└── applyAdminInvite/     # 处理管理员邀请码
-
-miniprogram/              # 小程序前端
-├── pages/                # 8个页面
-│   ├── index/            # 首页 - 事项列表
-│   ├── detail/           # 详情 - 事项详细信息
-│   ├── publish/          # 发布 - 创建/编辑事项（需要管理员权限）
-│   ├── my/               # 我的 - 用户信息、权限设置
-│   ├── my-posts/         # 我的发布 - 管理自己发布的事项
-│   ├── favorites/        # 收藏 - 收藏的事项
-│   ├── member-verify/    # 成员认证 - 班级身份认证
-│   └── admin-auth/       # 管理员认证 - 使用邀请码成为管理员
-├── components/           # 可复用组件
-│   └── cloudTipModal/    # 云操作提示框
-├── app.js                # 小程序全局配置和初始化
-└── config.example.js     # 配置文件模板
-
-docs/                     # 文档
-├── deploy.md             # 部署指南
-├── database.md           # 数据库集合说明
-└── security.md           # 安全注意事项
-```
-
-## 贡献
-
-发现问题可以直接提交 Issue。准备修改代码时，请先阅读 `CONTRIBUTING.md`。
-
-## 许可证
-
-本项目采用 MIT 许可证。详见 `LICENSE` 文件。
+- 项目依赖微信小程序和微信云开发环境。
+- 页面交互需要在微信开发者工具或真机中测试。
+- 班级成员名单、邀请码和订阅消息模板需要部署者自行配置。
 
 ## 反馈
 
-- 问题与建议：[GitHub Issues](https://github.com/Cheems-sudo/Class-Box/issues)
+如果你发现问题，或有适合班级场景的新想法，可以在 GitHub Issues 中提出。
+
+## 许可证
+
+本项目采用 MIT 许可证。详见 [LICENSE](LICENSE)。
