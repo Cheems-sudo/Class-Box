@@ -2,6 +2,10 @@ page {
   background: #f4f7fb;
 }
 
+button::after {
+  border: none;
+}
+
 .page {
   min-height: 100vh;
   padding: 28rpx 28rpx 50rpx;
@@ -13,6 +17,28 @@ page {
   font-size: 40rpx;
   font-weight: 700;
   line-height: 1.3;
+}
+
+.ai-entry-row {
+  margin-bottom: 22rpx;
+}
+
+.ai-entry-button {
+  margin: 0;
+  width: 100%;
+  height: 78rpx;
+  border-radius: 14rpx;
+  background: #ecfdf5;
+  color: #047857;
+  border: 1rpx solid #a7f3d0;
+  font-size: 28rpx;
+  font-weight: 700;
+  line-height: 78rpx;
+  text-align: center;
+}
+
+.button-hover {
+  opacity: 0.84;
 }
 
 .form-section,
@@ -319,6 +345,12 @@ page {
   box-shadow: 0 8rpx 18rpx rgba(37, 99, 235, 0.18);
 }
 
+.submit-button[disabled] {
+  background: #bfdbfe;
+  color: #ffffff;
+  box-shadow: none;
+}
+
 .state-card {
   color: #64748b;
   font-size: 28rpx;
@@ -352,4 +384,187 @@ page {
   color: #ffffff;
   font-size: 27rpx;
   font-weight: 700;
+}
+
+.ai-mask {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 34rpx 24rpx;
+  box-sizing: border-box;
+  background: rgba(15, 23, 42, 0.42);
+}
+
+.ai-panel {
+  width: 100%;
+  max-width: 680rpx;
+  max-height: 84vh;
+  border-radius: 18rpx;
+  background: #ffffff;
+  overflow: hidden;
+  box-shadow: 0 22rpx 60rpx rgba(15, 23, 42, 0.18);
+}
+
+.ai-panel-header {
+  padding: 30rpx 28rpx 22rpx;
+  border-bottom: 1rpx solid #eef2f7;
+}
+
+.ai-panel-title {
+  color: #0f172a;
+  font-size: 32rpx;
+  font-weight: 700;
+}
+
+.ai-scroll {
+  max-height: calc(84vh - 220rpx);
+  padding: 0 28rpx 18rpx;
+  box-sizing: border-box;
+}
+
+.ai-input {
+  min-height: 150rpx;
+}
+
+.ai-generate-button {
+  margin: 22rpx 0 0;
+  height: 78rpx;
+  border-radius: 14rpx;
+  background: #0f766e;
+  color: #ffffff;
+  font-size: 28rpx;
+  font-weight: 700;
+  line-height: 78rpx;
+  box-shadow: 0 8rpx 18rpx rgba(15, 118, 110, 0.16);
+}
+
+.ai-generate-button[disabled] {
+  background: #99f6e4;
+  box-shadow: none;
+}
+
+.ai-draft {
+  margin-top: 28rpx;
+  padding-top: 6rpx;
+  border-top: 1rpx solid #eef2f7;
+}
+
+.readonly-value {
+  min-height: 82rpx;
+  padding: 0 22rpx;
+  border-radius: 12rpx;
+  background: #f8fbff;
+  border: 1rpx solid #dbe7f3;
+  color: #475569;
+  font-size: 28rpx;
+  line-height: 82rpx;
+}
+
+.ai-warnings {
+  margin-top: 28rpx;
+  padding: 22rpx 24rpx;
+  border-radius: 14rpx;
+  background: #fff5f5;
+  border: 1rpx solid #fecaca;
+}
+
+.ai-warnings-top {
+  margin-top: 20rpx;
+  margin-bottom: 4rpx;
+}
+
+.ai-warning-header {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.ai-warning-mark {
+  width: 8rpx;
+  height: 30rpx;
+  border-radius: 999rpx;
+  background: #ef4444;
+}
+
+.ai-warning-title {
+  color: #991b1b;
+  font-size: 26rpx;
+  font-weight: 700;
+}
+
+.ai-warning-list {
+  margin-top: 14rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 10rpx;
+}
+
+.ai-warning-item {
+  position: relative;
+  padding-left: 22rpx;
+  color: #7f1d1d;
+  font-size: 25rpx;
+  line-height: 1.55;
+}
+
+.ai-warning-item::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 15rpx;
+  width: 8rpx;
+  height: 8rpx;
+  border-radius: 999rpx;
+  background: #ef4444;
+}
+
+.ai-actions {
+  padding: 20rpx 28rpx calc(40rpx + env(safe-area-inset-bottom));
+  display: flex;
+  align-items: center;
+  gap: 18rpx;
+  border-top: 1rpx solid #eef2f7;
+  background: #ffffff;
+}
+
+.ai-cancel-button {
+  flex: 0 0 168rpx;
+  margin: 0;
+  height: 80rpx;
+  border-radius: 14rpx;
+  background: #f1f5f9;
+  color: #334155;
+  font-size: 28rpx;
+  font-weight: 700;
+  line-height: 80rpx;
+  text-align: center;
+}
+
+.ai-cancel-button[disabled] {
+  color: #94a3b8;
+}
+
+.ai-publish-button {
+  flex: 1;
+  margin: 0;
+  height: 80rpx;
+  border-radius: 14rpx;
+  background: #2563eb;
+  color: #ffffff;
+  font-size: 29rpx;
+  font-weight: 700;
+  line-height: 80rpx;
+  text-align: center;
+  box-shadow: 0 8rpx 18rpx rgba(37, 99, 235, 0.18);
+}
+
+.ai-publish-button[disabled] {
+  background: #bfdbfe;
+  box-shadow: none;
 }

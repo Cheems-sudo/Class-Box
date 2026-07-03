@@ -1,7 +1,7 @@
 {
-  "name": "contentSecurityCheck",
+  "name": "parseNoticeWithAI",
   "version": "1.0.0",
-  "description": "Checks notice text and images before publishing",
+  "description": "Parses natural language notice input into a sanitized AI draft",
   "main": "index.js",
   "scripts": {
     "test": "node --check index.js"

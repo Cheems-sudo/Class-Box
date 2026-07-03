@@ -251,6 +251,39 @@
 }
 ```
 
+## ai_usage_logs
+
+用途：记录 AI 辅助发布的调用情况，方便排查问题、统计使用和定位失败原因。该集合不参与发布逻辑判断，不保存管理员输入原文，也不保存 AI 返回的完整正文。
+
+主要字段：
+
+| 字段 | 含义 |
+| --- | --- |
+| `_id` | 云数据库自动生成的记录 ID |
+| `openid` | 调用用户 openid |
+| `role` | 调用时用户角色 |
+| `inputLength` | 管理员输入文本长度 |
+| `success` | AI 草稿生成是否成功 |
+| `errorType` | 失败类型，例如 `permission`、`rate_limit`、`security`、`config`、`network`、`format`、`quota` |
+| `model` | 调用的 AI 模型名 |
+| `latencyMs` | 本次调用耗时，单位毫秒 |
+| `createdAt` | 创建时间 |
+
+示例数据：
+
+```json
+{
+  "openid": "openid_example",
+  "role": "admin",
+  "inputLength": 32,
+  "success": true,
+  "errorType": "",
+  "model": "hy3-preview",
+  "latencyMs": 1200,
+  "createdAt": "2026-07-03T06:30:00.000Z"
+}
+```
+
 ## operation_logs
 
 用途：记录身份认证、管理员授权、事项发布、编辑、删除等关键操作日志。日志中不应保存正文原文、完整邀请码、真实敏感配置或完整请求事件。

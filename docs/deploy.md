@@ -10,6 +10,10 @@
 4. 复制 `miniprogram/config.example.js` 为 `miniprogram/config.js`，填入自己的云环境 ID 和订阅消息模板 ID。
 5. 复制 `cloudfunctions/sendNoticeMessage/config.example.js` 为 `cloudfunctions/sendNoticeMessage/config.js`，填入自己的订阅消息模板 ID。
 6. 复制 `cloudfunctions/saveNoticeSubscriber/config.example.js` 为 `cloudfunctions/saveNoticeSubscriber/config.js`，填入同一个订阅消息模板 ID。
+7. 如需启用 AI 辅助发布，在云函数环境变量或服务端配置中设置：
+   - `AI_API_KEY`
+   - `AI_BASE_URL`
+   - `AI_MODEL`，例如 `hy3-preview`
 
 不要提交以下文件：
 
@@ -30,13 +34,14 @@
 - `contentSecurityCheck`
 - `createNotice`
 - `deleteNotice`
+- `parseNoticeWithAI`
 - `saveNoticeSubscriber`
 - `sendNoticeMessage`
 - `updateNotice`
 - `updateNoticePin`
 - `verifyMember`
 
-其中 `contentSecurityCheck`、`createNotice`、`updateNotice` 需要使用微信内容安全相关 OpenAPI 权限，包括文本检测和图片检测。
+其中 `contentSecurityCheck`、`createNotice`、`updateNotice` 需要使用微信内容安全相关 OpenAPI 权限，包括文本检测和图片检测。`parseNoticeWithAI` 需要使用文本内容安全检测权限，并需要能访问配置的 AI 服务地址。
 
 `sendNoticeMessage/config.json` 已声明订阅消息发送 OpenAPI 权限，部署时请确认该权限配置生效。
 
@@ -51,9 +56,12 @@
 - `subscribers`
 - `favorites`
 - `security_counters`
+- `ai_usage_logs`
 - `operation_logs`
 
 `security_counters` 使用固定时间桶记录发布、编辑、邀请码尝试等频率限制计数。
+
+`ai_usage_logs` 用于记录 AI 辅助发布的调用情况，不保存用户输入原文或 AI 返回完整正文。
 
 `operation_logs` 用于身份认证、管理员授权、事项发布、编辑、删除等关键操作日志。
 
@@ -72,6 +80,8 @@
 - `security_counters.openid`
 - `security_counters.action`
 - `security_counters.windowStart`
+- `ai_usage_logs.openid`
+- `ai_usage_logs.createdAt`
 - `operation_logs.openid`
 - `operation_logs.action`
 - `operation_logs.createdAt`
@@ -83,6 +93,7 @@
 - 普通用户不应直接写入 `notices`，发布应通过 `createNotice` 云函数。
 - 普通用户不应直接写入 `subscribers`，订阅授权应通过 `saveNoticeSubscriber` 云函数保存。
 - 普通用户不应直接写入 `security_counters`。
+- 普通用户不应直接读写 `ai_usage_logs`。
 - 普通用户不应直接写入 `operation_logs`。
 - 管理员授权、发布、编辑、删除等敏感操作应通过云函数完成权限校验。
 - `class_members`、`admin_invite_codes` 等敏感集合不要开放普通用户直接读写。
@@ -159,6 +170,7 @@
 - 所有云函数已部署。
 - 数据库集合已创建。
 - `security_counters` 和 `operation_logs` 已创建且权限收紧。
+- 如启用 AI 辅助发布，`parseNoticeWithAI` 已部署，`AI_API_KEY`、`AI_BASE_URL`、`AI_MODEL` 已在云函数环境或服务端配置中设置。
 - 班级成员数据已导入。
 - 管理员/超级管理员邀请码已创建。
 - 订阅消息模板 ID 已配置。

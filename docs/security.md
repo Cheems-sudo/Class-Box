@@ -9,6 +9,7 @@
 以下数据不应公开，也不应出现在仓库、截图、日志或演示数据中：
 
 - 小程序 AppID、云环境 ID、订阅消息模板 ID。
+- AI 服务 API Key、Base URL、模型配置等服务端凭据。
 - 用户 openid、unionid。
 - 真实学生姓名和学号。
 - 管理员和超级管理员邀请码。
@@ -36,6 +37,8 @@
 
 这些文件已写入 `.gitignore`，正常情况下 Git 会自动忽略。
 
+AI 辅助发布所需的 `AI_API_KEY`、`AI_BASE_URL`、`AI_MODEL` 只能放在云函数环境变量或服务端配置中，不能写入小程序前端代码，也不能提交到仓库。
+
 ## 权限边界
 
 不要只依赖前端判断权限。前端可以决定按钮是否显示，但不能作为安全边界。
@@ -50,6 +53,7 @@
 - 更新置顶状态。
 - 保存订阅授权。
 - 发送订阅消息。
+- AI 辅助解析发布草稿。
 
 普通用户不应直接写入 `notices`、`subscribers`、`security_counters`、`operation_logs` 等关键集合。数据库权限建议见 [database-permissions.md](database-permissions.md)。
 
@@ -62,6 +66,7 @@
 - `admin_invite_codes`：包含管理员/超级管理员邀请码。
 - `subscribers`：包含订阅消息授权记录。
 - `security_counters`：包含频率限制计数和失败记录。
+- `ai_usage_logs`：包含 AI 辅助发布调用日志。
 - `operation_logs`：包含关键操作日志。
 
 建议做法：
@@ -69,6 +74,7 @@
 - `class_members` 和 `admin_invite_codes` 不对普通用户开放直接读写。
 - `subscribers` 只通过 `saveNoticeSubscriber` 写入。
 - `security_counters` 只由云函数维护。
+- `ai_usage_logs` 只由 `parseNoticeWithAI` 写入，普通用户不可直接读取或写入。
 - `operation_logs` 只由云函数写入，普通用户不可直接读取。
 - 根据运营需要定期清理过期的 `security_counters` 和历史 `operation_logs`。
 
@@ -96,6 +102,7 @@
 - 附件 fileID 或 `cloud://` 地址。
 - 完整邀请码。
 - 真实配置值。
+- AI 辅助发布的管理员输入原文和 AI 返回完整正文。
 
 错误日志建议只记录错误类型、错误码、操作类型和脱敏后的上下文。
 
@@ -109,6 +116,8 @@
 - 链接标题和链接地址。
 - 图片内容。
 - 图片和附件名称。
+
+AI 辅助发布只生成草稿，不直接写入 `notices`。管理员输入在调用 AI 前需要先经过内容安全检测，AI 草稿确认发布时仍必须继续走现有发布安全检测。
 
 ## 发布前检查
 

@@ -1,3 +1,5 @@
+<page-meta page-style="{{aiModalVisible ? 'overflow: hidden;' : ''}}"></page-meta>
+
 <view class="page">
   <view wx:if="{{authLoading}}" class="state-card">权限加载中...</view>
 
@@ -9,6 +11,10 @@
 
   <view wx:elif="{{canPublish}}">
     <view class="page-title">{{isEdit ? '编辑事项' : '发布班务事项'}}</view>
+
+    <view wx:if="{{!isEdit}}" class="ai-entry-row">
+      <button class="ai-entry-button" bindtap="openAiModal" hover-class="button-hover">AI 辅助发布</button>
+    </view>
 
     <view class="form-section">
       <view class="section-title">基础信息</view>
@@ -195,13 +201,113 @@
 
     <view class="submit-actions">
       <button wx:if="{{!isEdit}}" class="reset-button" bindtap="handleResetForm">重置</button>
-      <button class="submit-button" bindtap="submitForm">{{isEdit ? '保存修改' : '发布'}}</button>
+      <button class="submit-button" loading="{{submitting}}" disabled="{{submitting}}" bindtap="submitForm">{{isEdit ? '保存修改' : '发布'}}</button>
+    </view>
+
+    <view wx:if="{{aiModalVisible}}" class="ai-mask" catchtouchmove="noop">
+      <view class="ai-panel" catchtap="noop">
+        <view class="ai-panel-header">
+          <view class="ai-panel-title">AI 辅助发布</view>
+        </view>
+
+        <scroll-view class="ai-scroll" scroll-y enhanced="{{true}}" show-scrollbar="{{false}}">
+          <view class="field">
+            <view class="label required">一句话描述</view>
+            <textarea
+              class="textarea ai-input"
+              maxlength="500"
+              adjust-position="{{false}}"
+              cursor-spacing="24"
+              placeholder="例如：明天下午三点到五点在C3-104考高数，记得带学生证"
+              bindinput="onAiInput"
+              bindblur="onAiInputBlur"
+            ></textarea>
+          </view>
+
+          <button class="ai-generate-button" loading="{{aiGenerating}}" disabled="{{aiGenerating || aiPublishing}}" bindtap="generateAiDraft" hover-class="button-hover">
+            {{aiGenerating ? '生成中' : '生成草稿'}}
+          </button>
+
+          <view wx:if="{{aiDraftReady}}" class="ai-draft">
+            <view class="field">
+              <view class="label required">标题</view>
+              <input class="input" value="{{aiDraft.title}}" maxlength="30" data-field="title" bindinput="onAiDraftFieldInput" />
+              <view class="helper">{{aiDraft.title.length}}/30</view>
+            </view>
+
+            <view class="field">
+              <view class="label required">分类选择</view>
+              <picker mode="selector" range="{{categories}}" value="{{aiCategoryIndex}}" bindchange="changeAiCategory">
+                <view class="picker-value">{{aiDraft.category || '请选择分类'}}</view>
+              </picker>
+            </view>
+
+            <view class="field">
+              <view class="label required">时间类型</view>
+              <picker mode="selector" range="{{aiTimeLabelOptions}}" value="{{aiTimeLabelIndex}}" bindchange="changeAiTimeLabel">
+                <view class="picker-value time-label-picker">{{aiDraft.timeLabel || '选择时间类型'}}</view>
+              </picker>
+            </view>
+
+            <view class="field">
+              <view class="label">课程 / 事项名称</view>
+              <input class="input" value="{{aiDraft.course}}" data-field="course" bindinput="onAiDraftFieldInput" />
+            </view>
+
+            <view class="field">
+              <view class="label required">开始 / 截止 / 相关时间</view>
+              <input class="input" value="{{aiDraft.deadline}}" placeholder="YYYY-MM-DD 或 YYYY-MM-DD HH:mm" data-field="deadline" bindinput="onAiDraftFieldInput" />
+            </view>
+
+            <view class="field">
+              <view class="label">结束时间</view>
+              <input class="input" value="{{aiDraft.endTime}}" placeholder="YYYY-MM-DD 或 YYYY-MM-DD HH:mm" data-field="endTime" bindinput="onAiDraftFieldInput" />
+            </view>
+
+            <view class="field">
+              <view class="label">地点</view>
+              <input class="input" value="{{aiDraft.location}}" data-field="location" bindinput="onAiDraftFieldInput" />
+            </view>
+
+            <view class="field">
+              <view class="label required">详细内容</view>
+              <textarea class="textarea" value="{{aiDraft.content}}" maxlength="500" adjust-position="{{false}}" cursor-spacing="24" data-field="content" bindinput="onAiDraftFieldInput"></textarea>
+              <view class="helper">{{aiDraft.content.length}}/500</view>
+            </view>
+
+            <view class="switch-field">
+              <view>
+                <view class="label">是否重要</view>
+                <view class="switch-tip">重要事项会在卡片上显示标记</view>
+              </view>
+              <switch checked="{{aiDraft.isImportant}}" color="#1e80ff" bindchange="onAiImportantChange" />
+            </view>
+
+            <view class="field">
+              <view class="label">发布人</view>
+              <view class="readonly-value">{{publisherName}}</view>
+            </view>
+
+            <view wx:if="{{aiDraft.warnings.length}}" class="ai-warnings">
+              <view class="ai-warning-title">警告信息</view>
+              <view class="ai-warning-item" wx:for="{{aiDraft.warnings}}" wx:key="index">{{item}}</view>
+            </view>
+          </view>
+        </scroll-view>
+
+        <view class="ai-actions">
+          <button class="ai-cancel-button" bindtap="closeAiModal" disabled="{{aiGenerating || aiPublishing}}" hover-class="button-hover">取消</button>
+          <button class="ai-publish-button" loading="{{aiPublishing}}" disabled="{{!aiDraftReady || aiGenerating || aiPublishing}}" bindtap="submitAiDraft" hover-class="button-hover">
+            {{aiPublishing ? '发布中' : '发布'}}
+          </button>
+        </view>
+      </view>
     </view>
   </view>
 
   <view wx:else class="state-card no-permission-card">
     <view class="no-permission-title">暂无发布权限</view>
-    <view class="no-permission-desc">只有班委或管理员可以发布班级事项</view>
-    <view class="no-permission-tip">如需开通权限，请联系小程序管理员</view>
+    <view class="no-permission-desc">只有班委可以发布班级事项</view>
+    <view class="no-permission-tip">如需开通权限，请联系班长</view>
   </view>
 </view>
