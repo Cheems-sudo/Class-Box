@@ -89,6 +89,7 @@ Page({
       url: "/pages/my-posts/my-posts",
     });
   },
+  noop() {},
   subscribeNextNotice() {
     if (this.data.subscribeLoading) {
       return;

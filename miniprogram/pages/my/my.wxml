@@ -26,8 +26,13 @@
         <view class="feature-desc">查看已收藏事项</view>
       </view>
 
-      <view class="feature-item {{subscribeLoading ? 'disabled' : ''}}" bindtap="subscribeNextNotice">
-        <view class="feature-title">{{subscribeLoading ? '订阅中' : '消息提醒'}}</view>
+      <view class="feature-item" wx:if="{{!subscribeLoading}}" bindtap="subscribeNextNotice">
+        <view class="feature-title">消息提醒</view>
+        <view class="feature-desc">接收下一条通知</view>
+      </view>
+
+      <view class="feature-item disabled" wx:else catchtap="noop">
+        <view class="feature-title">订阅中</view>
         <view class="feature-desc">接收下一条通知</view>
       </view>
 
