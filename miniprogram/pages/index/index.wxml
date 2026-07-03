@@ -16,6 +16,36 @@
   </view>
 
   <block wx:else>
+  <view class="important-section" wx:if="{{importantNoticeList.length}}">
+    <view class="important-title">重要事项</view>
+    <view
+      class="important-card category-{{item.categoryClass}}"
+      wx:for="{{importantNoticeList}}"
+      wx:key="_id"
+      data-notice-id="{{item._id}}"
+      bindtap="goDetail"
+    >
+      <view class="important-main">
+        <view class="tag">{{item.displayCategory || item.category}}</view>
+        <view class="important-card-title">{{item.title}}</view>
+      </view>
+      <view class="important-time">
+        <text class="time-label">{{item.timeLabel || '时间'}}</text>
+        <text class="time-value">{{item.timeText || item.deadline || '未填写'}}</text>
+      </view>
+      <view class="important-meta">
+        <view class="important-meta-item" wx:if="{{item.courseText}}">
+          <text class="meta-label">{{item.courseLabel}}</text>
+          <text class="meta-value">{{item.courseText}}</text>
+        </view>
+        <view class="important-meta-item" wx:if="{{item.locationText}}">
+          <text class="meta-label">{{item.locationLabel}}</text>
+          <text class="meta-value">{{item.locationText}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
   <view class="search-box">
     <text class="search-icon">⌕</text>
     <input
@@ -29,7 +59,6 @@
   </view>
 
   <view class="filter-block">
-    <view class="filter-label">分类</view>
     <scroll-view class="category-scroll" scroll-x enable-flex>
       <view class="category-list">
         <view
@@ -46,7 +75,6 @@
   </view>
 
   <view class="filter-block status-block">
-    <view class="filter-label">状态</view>
     <view class="status-filter">
       <view
         class="status-option {{activeStatus == item ? 'active' : ''}}"

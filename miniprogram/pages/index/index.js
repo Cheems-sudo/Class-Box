@@ -15,6 +15,7 @@ Page({
     activeStatus: "进行中",
     searchKeyword: "",
     noticeList: [],
+    importantNoticeList: [],
     filteredNoticeList: [],
     runningNoticeCount: 0,
     importantNoticeCount: 0,
@@ -71,6 +72,7 @@ Page({
       if (!verified) {
         this.setData({
           noticeList: [],
+          importantNoticeList: [],
           filteredNoticeList: [],
           runningNoticeCount: 0,
           importantNoticeCount: 0,
@@ -90,6 +92,7 @@ Page({
         authLoading: false,
         verified: false,
         noticeList: [],
+        importantNoticeList: [],
         filteredNoticeList: [],
         runningNoticeCount: 0,
         importantNoticeCount: 0,
@@ -138,7 +141,7 @@ Page({
             isExpired,
             statusText: isExpired ? "已过期" : "进行中",
             timeText: this.formatTimeRange(notice.deadline, notice.endTime),
-            important: notice.isImportant,
+            important: notice.important === true || notice.isImportant === true,
             place: notice.location,
           };
         }).sort((a, b) => {
@@ -157,8 +160,9 @@ Page({
 
         this.setData({
           noticeList,
+          importantNoticeList: this.getImportantNoticeList(noticeList),
           runningNoticeCount: noticeList.filter((notice) => !notice.isExpired).length,
-          importantNoticeCount: noticeList.filter((notice) => notice.important === true && !notice.isExpired).length,
+          importantNoticeCount: noticeList.filter((notice) => !notice.isExpired && (notice.important === true || notice.isImportant === true)).length,
           isLoading: false,
           loadError: false,
         }, () => {
@@ -172,6 +176,7 @@ Page({
       .catch(() => {
         this.setData({
           noticeList: [],
+          importantNoticeList: [],
           filteredNoticeList: [],
           runningNoticeCount: 0,
           importantNoticeCount: 0,
@@ -391,6 +396,23 @@ Page({
 
     return sortTime ? sortTime.getTime() : Number.MAX_SAFE_INTEGER;
   },
+  getImportantNoticeList(noticeList) {
+    return noticeList
+      .filter((notice) => !notice.isExpired && (notice.important === true || notice.isImportant === true))
+      .sort((a, b) => {
+        if (a.isPinned !== b.isPinned) {
+          return a.isPinned ? -1 : 1;
+        }
+
+        const sortResult = this.getSortTime(a) - this.getSortTime(b);
+
+        if (sortResult !== 0) {
+          return sortResult;
+        }
+
+        return String(a.deadline || "").localeCompare(String(b.deadline || ""));
+      });
+  },
   changeCategory(e) {
     this.setData({
       activeCategory: e.currentTarget.dataset.category,
@@ -441,8 +463,11 @@ Page({
     });
   },
   goDetail(e) {
+    const noticeId = e.currentTarget.dataset.noticeId;
     const index = e.currentTarget.dataset.index;
-    const notice = this.data.filteredNoticeList[index];
+    const notice = noticeId
+      ? this.data.noticeList.find((item) => item._id === noticeId)
+      : this.data.filteredNoticeList[index];
 
     if (!notice) {
       return;

@@ -801,11 +801,16 @@ Page({
   },
   onAiDeadlineDateChange(e) {
     const date = e.detail.value;
-
-    this.setData({
+    const nextData = {
       aiDeadlineDate: date,
       "aiDraft.deadline": this.buildDateTime(date, this.data.aiDeadlineTime),
-    });
+    };
+
+    if (!this.data.aiEndDate && this.data.aiEndTime) {
+      nextData["aiDraft.endTime"] = this.buildDateTime(date, this.data.aiEndTime);
+    }
+
+    this.setData(nextData);
   },
   onAiDeadlineTimeChange(e) {
     const time = e.detail.value;
@@ -831,10 +836,11 @@ Page({
   },
   onAiEndTimeChange(e) {
     const time = e.detail.value;
+    const endDate = this.data.aiEndDate || this.data.aiDeadlineDate;
 
     this.setData({
       aiEndTime: time,
-      "aiDraft.endTime": this.buildDateTime(this.data.aiEndDate, time),
+      "aiDraft.endTime": endDate ? this.buildDateTime(endDate, time) : "",
     });
   },
   clearAiEndTime() {
@@ -1197,18 +1203,15 @@ Page({
       return this.validateContent(content);
     }
 
-    if (!form.endDate && form.endClock) {
-      this.showError("请先选择结束日期");
-      return false;
-    }
+    const effectiveEndDate = form.endDate || (form.endClock ? form.date : "");
 
-    if (form.endDate) {
-      if (form.endDate < form.date) {
+    if (effectiveEndDate) {
+      if (effectiveEndDate < form.date) {
         this.showError("结束时间必须晚于开始时间");
         return false;
       }
 
-      if (form.endDate === form.date && form.time && form.endClock && form.endClock <= form.time) {
+      if (effectiveEndDate === form.date && form.time && form.endClock && form.endClock <= form.time) {
         this.showError("结束时间必须晚于开始时间");
         return false;
       }
@@ -1356,7 +1359,8 @@ Page({
     }
 
     const now = new Date().toISOString();
-    const endTime = this.data.timeConfig.showEndTime && form.endDate ? this.buildDateTime(form.endDate, form.endClock) : "";
+    const effectiveEndDate = this.data.timeConfig.showEndTime ? (form.endDate || (form.endClock ? form.date : "")) : "";
+    const endTime = effectiveEndDate ? this.buildDateTime(effectiveEndDate, form.endClock) : "";
     let uploadedImages = [];
     let uploadedAttachments = [];
 
@@ -1440,9 +1444,10 @@ Page({
     if (!this.data.categories.includes(category)) return "请选择分类";
     if (!allTimeLabels.includes(timeLabel)) return "请选择时间类型";
     if (!this.data.aiDeadlineDate) return "请选择日期";
-    if (this.data.aiEndTime && !this.data.aiEndDate) return "请先选择结束日期";
-    if (this.data.aiEndDate && this.data.aiEndDate < this.data.aiDeadlineDate) return "结束时间必须晚于开始时间";
-    if (this.data.aiEndDate === this.data.aiDeadlineDate && this.data.aiDeadlineTime && this.data.aiEndTime && this.data.aiEndTime <= this.data.aiDeadlineTime) {
+    const effectiveAiEndDate = this.data.aiEndDate || (this.data.aiEndTime ? this.data.aiDeadlineDate : "");
+
+    if (effectiveAiEndDate && effectiveAiEndDate < this.data.aiDeadlineDate) return "结束时间必须晚于开始时间";
+    if (effectiveAiEndDate === this.data.aiDeadlineDate && this.data.aiDeadlineTime && this.data.aiEndTime && this.data.aiEndTime <= this.data.aiDeadlineTime) {
       return "结束时间必须晚于开始时间";
     }
     if (!content) return "请填写详细内容";
@@ -1510,7 +1515,9 @@ Page({
       timeLabel: this.normalizeTimeLabel(draft.timeLabel),
       course: String(draft.course || "").trim(),
       deadline: this.buildDateTime(this.data.aiDeadlineDate, this.data.aiDeadlineTime),
-      endTime: this.data.aiEndDate ? this.buildDateTime(this.data.aiEndDate, this.data.aiEndTime) : "",
+      endTime: (this.data.aiEndDate || this.data.aiEndTime)
+        ? this.buildDateTime(this.data.aiEndDate || this.data.aiDeadlineDate, this.data.aiEndTime)
+        : "",
       location: String(draft.location || "").trim(),
       content: String(draft.content || "").trim(),
       images: [],

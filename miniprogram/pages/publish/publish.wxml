@@ -114,7 +114,7 @@
           </picker>
           <button class="time-clear-button {{(form.endDate || form.endClock) ? 'visible' : ''}}" disabled="{{!(form.endDate || form.endClock)}}" bindtap="clearEndTime">清空</button>
         </view>
-        <view class="helper left">结束时间可不填；填写后需晚于开始时间</view>
+        <view class="helper left">结束日期不填则默认开始日期；填写后需晚于开始时间</view>
       </view>
     </view>
 
@@ -310,7 +310,7 @@
                 </picker>
                 <button class="time-clear-button {{(aiEndDate || aiEndTime) ? 'visible' : ''}}" disabled="{{!(aiEndDate || aiEndTime)}}" bindtap="clearAiEndTime">清空</button>
               </view>
-              <view class="helper left">结束时间可不填；填写后需晚于开始时间</view>
+              <view class="helper left">结束日期不填则默认开始日期；填写后需晚于开始时间</view>
             </view>
 
             <view class="field">
