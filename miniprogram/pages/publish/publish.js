@@ -141,6 +141,7 @@ Page({
     isSuperAdmin: false,
     publisherName: "未知",
     isEdit: false,
+    publishMode: "",
     editNoticeId: "",
     editPublisherOpenid: "",
     maxImageCount,
@@ -247,6 +248,35 @@ Page({
     });
   },
   noop() {},
+  selectAiPublishMode() {
+    if (this.data.isEdit) {
+      return;
+    }
+
+    this.setData({
+      publishMode: "ai",
+    }, () => {
+      this.openAiModal();
+    });
+  },
+  selectManualPublishMode() {
+    if (this.data.isEdit) {
+      return;
+    }
+
+    this.setData({
+      publishMode: "manual",
+    });
+  },
+  resetPublishMode() {
+    if (this.data.isEdit || this.data.submitting) {
+      return;
+    }
+
+    this.setData({
+      publishMode: "",
+    });
+  },
   initEditMode(options) {
     if (!options || !options.notice) {
       return;
@@ -306,6 +336,7 @@ Page({
 
     this.setData({
       isEdit: true,
+      publishMode: "manual",
       editNoticeId: notice._id,
       editPublisherOpenid: notice.publisherOpenid || "",
       categoryIndex,
@@ -627,6 +658,7 @@ Page({
     this.aiInputValue = "";
 
     this.setData({
+      publishMode: "ai",
       aiModalVisible: true,
       aiInput: "",
       aiGenerating: false,
@@ -765,6 +797,51 @@ Page({
     this.setData({
       aiTimeLabelIndex,
       "aiDraft.timeLabel": timeLabel,
+    });
+  },
+  onAiDeadlineDateChange(e) {
+    const date = e.detail.value;
+
+    this.setData({
+      aiDeadlineDate: date,
+      "aiDraft.deadline": this.buildDateTime(date, this.data.aiDeadlineTime),
+    });
+  },
+  onAiDeadlineTimeChange(e) {
+    const time = e.detail.value;
+
+    this.setData({
+      aiDeadlineTime: time,
+      "aiDraft.deadline": this.buildDateTime(this.data.aiDeadlineDate, time),
+    });
+  },
+  clearAiDeadlineTime() {
+    this.setData({
+      aiDeadlineTime: "",
+      "aiDraft.deadline": this.data.aiDeadlineDate,
+    });
+  },
+  onAiEndDateChange(e) {
+    const date = e.detail.value;
+
+    this.setData({
+      aiEndDate: date,
+      "aiDraft.endTime": this.buildDateTime(date, this.data.aiEndTime),
+    });
+  },
+  onAiEndTimeChange(e) {
+    const time = e.detail.value;
+
+    this.setData({
+      aiEndTime: time,
+      "aiDraft.endTime": this.buildDateTime(this.data.aiEndDate, time),
+    });
+  },
+  clearAiEndTime() {
+    this.setData({
+      aiEndDate: "",
+      aiEndTime: "",
+      "aiDraft.endTime": "",
     });
   },
   onAiDraftFieldInput(e) {
@@ -1086,6 +1163,9 @@ Page({
         }
 
         this.resetPublishForm();
+        this.setData({
+          publishMode: "manual",
+        });
       },
     });
   },
@@ -1560,6 +1640,7 @@ Page({
       locationLabel: this.getLocationLabel("考试安排"),
       locationPlaceholder: this.getLocationPlaceholder("考试安排"),
       isEdit: false,
+      publishMode: "",
       editNoticeId: "",
       editPublisherOpenid: "",
       existingImages: [],

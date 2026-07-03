@@ -19,26 +19,123 @@ button::after {
   line-height: 1.3;
 }
 
-.ai-entry-row {
-  margin-bottom: 22rpx;
-}
-
-.ai-entry-button {
-  margin: 0;
-  width: 100%;
-  height: 78rpx;
-  border-radius: 14rpx;
-  background: #ecfdf5;
-  color: #047857;
-  border: 1rpx solid #a7f3d0;
-  font-size: 28rpx;
-  font-weight: 700;
-  line-height: 78rpx;
-  text-align: center;
-}
-
 .button-hover {
   opacity: 0.84;
+}
+
+.publish-mode-list {
+  display: flex;
+  flex-direction: column;
+  gap: 22rpx;
+}
+
+.publish-mode-card {
+  position: relative;
+  overflow: hidden;
+  padding: 30rpx 30rpx 32rpx;
+  border-radius: 18rpx;
+  background: #ffffff;
+  border: 1rpx solid #e5edf6;
+  box-shadow: 0 10rpx 26rpx rgba(15, 23, 42, 0.06);
+}
+
+.publish-mode-card::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 8rpx;
+}
+
+.ai-mode-card {
+  border-color: #b7ebd3;
+}
+
+.ai-mode-card::before {
+  background: #10b981;
+}
+
+.manual-mode-card {
+  border-color: #bfdbfe;
+}
+
+.manual-mode-card::before {
+  background: #2563eb;
+}
+
+.mode-card-hover {
+  opacity: 0.86;
+  transform: scale(0.99);
+}
+
+.mode-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20rpx;
+}
+
+.mode-icon {
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: 14rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24rpx;
+  font-weight: 800;
+}
+
+.ai-mode-icon {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.manual-mode-icon {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.mode-action {
+  color: #64748b;
+  font-size: 24rpx;
+  font-weight: 600;
+}
+
+.mode-title {
+  margin-top: 24rpx;
+  color: #0f172a;
+  font-size: 36rpx;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.mode-desc {
+  margin-top: 12rpx;
+  color: #334155;
+  font-size: 28rpx;
+  line-height: 1.5;
+}
+
+.mode-note {
+  margin-top: 18rpx;
+  color: #64748b;
+  font-size: 24rpx;
+  line-height: 1.45;
+}
+
+.mode-back-button {
+  margin: 0 0 22rpx;
+  width: 100%;
+  height: 68rpx;
+  border-radius: 12rpx;
+  background: #eef2f7;
+  color: #475569;
+  font-size: 26rpx;
+  font-weight: 600;
+  line-height: 68rpx;
+  text-align: center;
 }
 
 .form-section,

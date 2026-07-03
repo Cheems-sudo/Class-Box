@@ -12,9 +12,30 @@
   <view wx:elif="{{canPublish}}">
     <view class="page-title">{{isEdit ? '编辑事项' : '发布班务事项'}}</view>
 
-    <view wx:if="{{!isEdit}}" class="ai-entry-row">
-      <button class="ai-entry-button" bindtap="openAiModal" hover-class="button-hover">AI 辅助发布</button>
+    <view wx:if="{{!isEdit && publishMode != 'manual'}}" class="publish-mode-list">
+      <view class="publish-mode-card ai-mode-card" bindtap="selectAiPublishMode" hover-class="mode-card-hover">
+        <view class="mode-card-top">
+          <view class="mode-icon ai-mode-icon">AI</view>
+          <view class="mode-action">快速开始</view>
+        </view>
+        <view class="mode-title">AI 快速发布</view>
+        <view class="mode-desc">输入一句话，自动整理标题、时间、地点和内容</view>
+        <view class="mode-note">适合考试、作业、班会、活动通知</view>
+      </view>
+
+      <view class="publish-mode-card manual-mode-card" bindtap="selectManualPublishMode" hover-class="mode-card-hover">
+        <view class="mode-card-top">
+          <view class="mode-icon manual-mode-icon">填</view>
+          <view class="mode-action">完整填写</view>
+        </view>
+        <view class="mode-title">手动发布</view>
+        <view class="mode-desc">逐项填写完整信息</view>
+        <view class="mode-note">适合带图片、附件、链接的复杂事项</view>
+      </view>
     </view>
+
+    <block wx:if="{{isEdit || publishMode === 'manual'}}">
+    <button wx:if="{{!isEdit}}" class="mode-back-button" bindtap="resetPublishMode" hover-class="button-hover">重新选择发布方式</button>
 
     <view class="form-section">
       <view class="section-title">基础信息</view>
@@ -203,6 +224,7 @@
       <button wx:if="{{!isEdit}}" class="reset-button" bindtap="handleResetForm">重置</button>
       <button class="submit-button" loading="{{submitting}}" disabled="{{submitting}}" bindtap="submitForm">{{isEdit ? '保存修改' : '发布'}}</button>
     </view>
+    </block>
 
     <view wx:if="{{aiModalVisible}}" class="ai-mask" catchtouchmove="noop">
       <view class="ai-panel" catchtap="noop">
@@ -229,6 +251,16 @@
           </button>
 
           <view wx:if="{{aiDraftReady}}" class="ai-draft">
+            <view wx:if="{{aiDraft.warnings.length}}" class="ai-warnings ai-warnings-top">
+              <view class="ai-warning-header">
+                <view class="ai-warning-mark"></view>
+                <view class="ai-warning-title">需要确认的信息</view>
+              </view>
+              <view class="ai-warning-list">
+                <view class="ai-warning-item" wx:for="{{aiDraft.warnings}}" wx:key="index">{{item}}</view>
+              </view>
+            </view>
+
             <view class="field">
               <view class="label required">标题</view>
               <input class="input" value="{{aiDraft.title}}" maxlength="30" data-field="title" bindinput="onAiDraftFieldInput" />
@@ -256,12 +288,29 @@
 
             <view class="field">
               <view class="label required">开始 / 截止 / 相关时间</view>
-              <input class="input" value="{{aiDraft.deadline}}" placeholder="YYYY-MM-DD 或 YYYY-MM-DD HH:mm" data-field="deadline" bindinput="onAiDraftFieldInput" />
+              <view class="time-grid">
+                <picker class="time-date-picker" mode="date" value="{{aiDeadlineDate}}" bindchange="onAiDeadlineDateChange">
+                  <view class="picker-value">{{aiDeadlineDate || '选择日期'}}</view>
+                </picker>
+                <picker class="time-clock-picker" mode="time" value="{{aiDeadlineTime}}" bindchange="onAiDeadlineTimeChange">
+                  <view class="picker-value">{{aiDeadlineTime || '选时间'}}</view>
+                </picker>
+                <button class="time-clear-button {{aiDeadlineTime ? 'visible' : ''}}" disabled="{{!aiDeadlineTime}}" bindtap="clearAiDeadlineTime">清空</button>
+              </view>
             </view>
 
             <view class="field">
               <view class="label">结束时间</view>
-              <input class="input" value="{{aiDraft.endTime}}" placeholder="YYYY-MM-DD 或 YYYY-MM-DD HH:mm" data-field="endTime" bindinput="onAiDraftFieldInput" />
+              <view class="time-grid">
+                <picker class="time-date-picker" mode="date" value="{{aiEndDate}}" bindchange="onAiEndDateChange">
+                  <view class="picker-value">{{aiEndDate || '选日期'}}</view>
+                </picker>
+                <picker class="time-clock-picker" mode="time" value="{{aiEndTime}}" bindchange="onAiEndTimeChange">
+                  <view class="picker-value">{{aiEndTime || '选时间'}}</view>
+                </picker>
+                <button class="time-clear-button {{(aiEndDate || aiEndTime) ? 'visible' : ''}}" disabled="{{!(aiEndDate || aiEndTime)}}" bindtap="clearAiEndTime">清空</button>
+              </view>
+              <view class="helper left">结束时间可不填；填写后需晚于开始时间</view>
             </view>
 
             <view class="field">
@@ -286,11 +335,6 @@
             <view class="field">
               <view class="label">发布人</view>
               <view class="readonly-value">{{publisherName}}</view>
-            </view>
-
-            <view wx:if="{{aiDraft.warnings.length}}" class="ai-warnings">
-              <view class="ai-warning-title">警告信息</view>
-              <view class="ai-warning-item" wx:for="{{aiDraft.warnings}}" wx:key="index">{{item}}</view>
             </view>
           </view>
         </scroll-view>

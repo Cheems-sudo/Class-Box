@@ -1,7 +1,7 @@
 <view class="page">
   <view class="header">
-    <view class="title">班级盒子</view>
-    <view class="subtitle">本班考试、作业、活动和通知统一整理</view>
+    <view class="title">事项概览</view>
+    <view class="subtitle">进行中 {{runningNoticeCount}} 项，重要事项 {{importantNoticeCount}} 项</view>
   </view>
 
   <view class="state-card verify-card" wx:if="{{authLoading}}">
@@ -33,13 +33,13 @@
     <scroll-view class="category-scroll" scroll-x enable-flex>
       <view class="category-list">
         <view
-          class="category {{activeCategory == item ? 'active' : ''}}"
-          wx:for="{{categories}}"
-          wx:key="*this"
-          data-category="{{item}}"
+          class="category {{activeCategory == item.value ? 'active' : ''}}"
+          wx:for="{{categoryTabs}}"
+          wx:key="value"
+          data-category="{{item.value}}"
           bindtap="changeCategory"
         >
-          {{item}}
+          {{item.label}}
         </view>
       </view>
     </scroll-view>
@@ -73,7 +73,7 @@
 
     <block wx:else>
       <view
-        class="notice-card {{item.isExpired ? 'expired' : ''}}"
+        class="notice-card category-{{item.categoryClass}} {{item.isExpired ? 'expired' : ''}}"
         wx:for="{{filteredNoticeList}}"
         wx:key="_id"
         data-index="{{index}}"
@@ -81,10 +81,10 @@
       >
         <view class="card-top">
           <view class="tag-row">
-            <view class="tag">{{item.category}}</view>
+            <view class="tag">{{item.displayCategory || item.category}}</view>
             <view class="pin-tag" wx:if="{{item.isPinned}}">置顶</view>
             <view class="important" wx:if="{{item.important}}">重要</view>
-            <view class="status-tag {{item.isExpired ? 'expired' : 'active'}}">{{item.statusText}}</view>
+            <view class="status-tag expired" wx:if="{{item.isExpired}}">已过期</view>
           </view>
         </view>
         <view class="card-title">{{item.title}}</view>

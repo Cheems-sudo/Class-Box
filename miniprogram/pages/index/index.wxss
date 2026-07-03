@@ -8,7 +8,12 @@ page {
 }
 
 .header {
-  margin-bottom: 22rpx;
+  margin-bottom: 24rpx;
+  padding: 26rpx 28rpx;
+  border-radius: 16rpx;
+  background: #ffffff;
+  border: 1rpx solid #e5edf6;
+  box-shadow: 0 8rpx 22rpx rgba(15, 23, 42, 0.045);
 }
 
 .title {
@@ -138,6 +143,8 @@ page {
 }
 
 .notice-card {
+  position: relative;
+  overflow: hidden;
   padding: 26rpx 28rpx 28rpx;
   border-radius: 16rpx;
   background: #ffffff;
@@ -145,8 +152,34 @@ page {
   box-shadow: 0 8rpx 22rpx rgba(15, 23, 42, 0.045);
 }
 
-.notice-card:not(.expired) {
-  border-left: 6rpx solid #dbeafe;
+.notice-card::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 6rpx;
+  background: #94a3b8;
+}
+
+.notice-card.category-exam::before {
+  background: #ef4444;
+}
+
+.notice-card.category-homework::before {
+  background: #2563eb;
+}
+
+.notice-card.category-activity::before {
+  background: #8b5cf6;
+}
+
+.notice-card.category-notice::before {
+  background: #10b981;
+}
+
+.notice-card.category-other::before {
+  background: #94a3b8;
 }
 
 .notice-card.expired {
@@ -185,14 +218,14 @@ page {
 }
 
 .tag {
-  background: #eff6ff;
-  color: #1d4ed8;
+  background: #f1f5f9;
+  color: #334155;
 }
 
 .pin-tag {
-  background: #fff7ed;
-  color: #c2410c;
-  font-weight: 700;
+  background: #f8fafc;
+  color: #64748b;
+  font-weight: 600;
 }
 
 .important {

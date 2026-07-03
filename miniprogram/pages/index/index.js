@@ -2,13 +2,22 @@ const noticePageSize = 20;
 
 Page({
   data: {
-    categories: ["全部", "考试安排", "作业信息", "活动信息", "班级通知", "其他"],
+    categoryTabs: [
+      { value: "全部", label: "全部" },
+      { value: "考试安排", label: "考试" },
+      { value: "作业信息", label: "作业" },
+      { value: "活动信息", label: "活动" },
+      { value: "班级通知", label: "通知" },
+      { value: "其他", label: "其他" },
+    ],
     statusFilters: ["进行中", "已过期", "全部"],
     activeCategory: "全部",
     activeStatus: "进行中",
     searchKeyword: "",
     noticeList: [],
     filteredNoticeList: [],
+    runningNoticeCount: 0,
+    importantNoticeCount: 0,
     authLoading: true,
     verified: false,
     isLoading: false,
@@ -63,6 +72,8 @@ Page({
         this.setData({
           noticeList: [],
           filteredNoticeList: [],
+          runningNoticeCount: 0,
+          importantNoticeCount: 0,
           isLoading: false,
           loadError: false,
         });
@@ -80,6 +91,8 @@ Page({
         verified: false,
         noticeList: [],
         filteredNoticeList: [],
+        runningNoticeCount: 0,
+        importantNoticeCount: 0,
         isLoading: false,
         loadError: true,
       });
@@ -113,6 +126,8 @@ Page({
           return {
             ...notice,
             category,
+            displayCategory: this.getCategoryShortName(category),
+            categoryClass: this.getCategoryClass(category),
             timeLabel,
             courseLabel: this.getCourseLabel(category),
             courseText,
@@ -142,6 +157,8 @@ Page({
 
         this.setData({
           noticeList,
+          runningNoticeCount: noticeList.filter((notice) => !notice.isExpired).length,
+          importantNoticeCount: noticeList.filter((notice) => notice.important === true && !notice.isExpired).length,
           isLoading: false,
           loadError: false,
         }, () => {
@@ -156,6 +173,8 @@ Page({
         this.setData({
           noticeList: [],
           filteredNoticeList: [],
+          runningNoticeCount: 0,
+          importantNoticeCount: 0,
           isLoading: false,
           loadError: true,
         });
@@ -236,6 +255,28 @@ Page({
   },
   normalizeTimeLabel(timeLabel) {
     return timeLabel === "事项时间" ? "相关时间" : timeLabel;
+  },
+  getCategoryShortName(category) {
+    const categoryNameMap = {
+      考试安排: "考试",
+      作业信息: "作业",
+      活动信息: "活动",
+      班级通知: "通知",
+      其他: "其他",
+    };
+
+    return categoryNameMap[this.normalizeCategory(category)] || "其他";
+  },
+  getCategoryClass(category) {
+    const categoryClassMap = {
+      考试安排: "exam",
+      作业信息: "homework",
+      活动信息: "activity",
+      班级通知: "notice",
+      其他: "other",
+    };
+
+    return categoryClassMap[this.normalizeCategory(category)] || "other";
   },
   getPublisherNameText(publisherName) {
     const name = String(publisherName || "").trim();
