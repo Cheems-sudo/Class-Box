@@ -1,7 +1,7 @@
-﻿const initialForm = {
+const initialForm = {
   title: "",
-  category: "鑰冭瘯瀹夋帓",
-  timeLabel: "鑰冭瘯鏃堕棿",
+  category: "考试安排",
+  timeLabel: "考试时间",
   course: "",
   date: "",
   time: "",
@@ -14,54 +14,54 @@
 };
 
 const categoryTimeLabelMap = {
-  "鑰冭瘯瀹夋帓": "鑰冭瘯鏃堕棿",
-  "浣滀笟淇℃伅": "鎴鏃堕棿",
-  "娲诲姩淇℃伅": "鎶ュ悕鎴",
-  "鐝骇閫氱煡": "鐩稿叧鏃堕棿",
-  "鍏朵粬": "鐩稿叧鏃堕棿",
+  "考试安排": "考试时间",
+  "作业信息": "截止时间",
+  "活动信息": "报名截止",
+  "班级通知": "相关时间",
+  "其他": "相关时间",
 };
 
 const categoryTimeConfigMap = {
-  "鑰冭瘯瀹夋帓": {
-    timeLabelOptions: ["鑰冭瘯鏃堕棿"],
+  "考试安排": {
+    timeLabelOptions: ["考试时间"],
   },
-  "浣滀笟淇℃伅": {
-    timeLabelOptions: ["鎴鏃堕棿"],
+  "作业信息": {
+    timeLabelOptions: ["截止时间"],
   },
-  "娲诲姩淇℃伅": {
-    timeLabelOptions: ["鎶ュ悕鎴", "娲诲姩鏃堕棿"],
+  "活动信息": {
+    timeLabelOptions: ["报名截止", "活动时间"],
   },
-  "鐝骇閫氱煡": {
-    timeLabelOptions: ["鐩稿叧鏃堕棿", "娲诲姩鏃堕棿", "鎴鏃堕棿"],
+  "班级通知": {
+    timeLabelOptions: ["相关时间", "活动时间", "截止时间"],
   },
-  "鍏朵粬": {
-    timeLabelOptions: ["鐩稿叧鏃堕棿", "娲诲姩鏃堕棿", "鎴鏃堕棿"],
+  "其他": {
+    timeLabelOptions: ["相关时间", "活动时间", "截止时间"],
   },
 };
 
 const timeLabelConfigMap = {
-  "鑰冭瘯鏃堕棿": {
+  "考试时间": {
     mainLabel: "开始日期 / 开始时间",
     endSectionLabel: "考试结束时间（选填）",
     showEndTime: true,
   },
-  "娲诲姩鏃堕棿": {
+  "活动时间": {
     mainLabel: "开始日期 / 开始时间",
     endSectionLabel: "活动结束时间（选填）",
     showEndTime: true,
   },
-  "鎴鏃堕棿": {
-    mainLabel: "鎴鏃ユ湡 / 鎴鏃堕棿",
+  "截止时间": {
+    mainLabel: "截止日期 / 截止时间",
     endSectionLabel: "",
     showEndTime: false,
   },
-  "鎶ュ悕鎴": {
-    mainLabel: "鎶ュ悕鎴鏃ユ湡 / 鎶ュ悕鎴鏃堕棿",
+  "报名截止": {
+    mainLabel: "报名截止日期 / 报名截止时间",
     endSectionLabel: "",
     showEndTime: false,
   },
-  "鐩稿叧鏃堕棿": {
-    mainLabel: "鐩稿叧鏃ユ湡 / 鐩稿叧鏃堕棿",
+  "相关时间": {
+    mainLabel: "相关日期 / 相关时间",
     endSectionLabel: "",
     showEndTime: false,
   },
@@ -70,35 +70,35 @@ const timeLabelConfigMap = {
 const allTimeLabels = Object.keys(timeLabelConfigMap);
 
 const courseLabelMap = {
-  "鑰冭瘯瀹夋帓": "绉戠洰",
-  "浣滀笟淇℃伅": "璇剧▼",
-  "娲诲姩淇℃伅": "娲诲姩鍚嶇О",
-  "鐝骇閫氱煡": "浜嬮」鍚嶇О",
-  "鍏朵粬": "浜嬮」鍚嶇О",
+  "考试安排": "科目",
+  "作业信息": "课程",
+  "活动信息": "活动名称",
+  "班级通知": "事项名称",
+  "其他": "事项名称",
 };
 
 const coursePlaceholderMap = {
-  "鑰冭瘯瀹夋帓": "例如：高等数学",
-  "浣滀笟淇℃伅": "例如：高等数学",
-  "娲诲姩淇℃伅": "例如：龙舟比赛",
-  "鐝骇閫氱煡": "渚嬪锛氱彮浼氶€氱煡",
-  "鍏朵粬": "请输入事项名称",
+  "考试安排": "例如：高等数学",
+  "作业信息": "例如：高等数学",
+  "活动信息": "例如：龙舟比赛",
+  "班级通知": "例如：班会通知",
+  "其他": "请输入事项名称",
 };
 
 const locationLabelMap = {
-  "鑰冭瘯瀹夋帓": "鑰冭瘯鍦扮偣",
-  "浣滀笟淇℃伅": "鎻愪氦鏂瑰紡",
-  "娲诲姩淇℃伅": "娲诲姩鍦扮偣",
-  "鐝骇閫氱煡": "鍦扮偣",
-  "鍏朵粬": "鍦扮偣",
+  "考试安排": "考试地点",
+  "作业信息": "提交方式",
+  "活动信息": "活动地点",
+  "班级通知": "地点",
+  "其他": "地点",
 };
 
 const locationPlaceholderMap = {
-  "鑰冭瘯瀹夋帓": "渚嬪锛氭暀瀛︽ゼ A203",
-  "浣滀笟淇℃伅": "例如：学习通 / 纸质提交 / QQ群文件",
-  "娲诲姩淇℃伅": "渚嬪锛氫綋鑲查 / 鎿嶅満 / 绾夸笂",
-  "鐝骇閫氱煡": "渚嬪锛氭暀瀛︽ゼ A101",
-  "鍏朵粬": "璇疯緭鍏ュ湴鐐规垨璇存槑",
+  "考试安排": "例如：教学楼 A203",
+  "作业信息": "例如：学习通 / 纸质提交 / QQ群文件",
+  "活动信息": "例如：体育馆 / 操场 / 线上",
+  "班级通知": "例如：教学楼 A101",
+  "其他": "请输入地点或说明",
 };
 
 const maxImageCount = 6;
@@ -122,16 +122,16 @@ const initialAiDraft = {
 
 Page({
   data: {
-    categories: ["鑰冭瘯瀹夋帓", "浣滀笟淇℃伅", "娲诲姩淇℃伅", "鐝骇閫氱煡", "鍏朵粬"],
-    timeLabelOptions: categoryTimeConfigMap["鑰冭瘯瀹夋帓"].timeLabelOptions,
+    categories: ["考试安排", "作业信息", "活动信息", "班级通知", "其他"],
+    timeLabelOptions: categoryTimeConfigMap["考试安排"].timeLabelOptions,
     timeConfig: {
-      ...timeLabelConfigMap["鑰冭瘯鏃堕棿"],
+      ...timeLabelConfigMap["考试时间"],
       showTimeLabelPicker: false,
     },
-    courseLabel: courseLabelMap["鑰冭瘯瀹夋帓"],
-    coursePlaceholder: coursePlaceholderMap["鑰冭瘯瀹夋帓"],
-    locationLabel: locationLabelMap["鑰冭瘯瀹夋帓"],
-    locationPlaceholder: locationPlaceholderMap["鑰冭瘯瀹夋帓"],
+    courseLabel: courseLabelMap["考试安排"],
+    coursePlaceholder: coursePlaceholderMap["考试安排"],
+    locationLabel: locationLabelMap["考试安排"],
+    locationPlaceholder: locationPlaceholderMap["考试安排"],
     categoryIndex: 0,
     timeLabelIndex: 0,
     authLoading: true,
@@ -139,7 +139,7 @@ Page({
     canPublish: false,
     openid: "",
     isSuperAdmin: false,
-    publisherName: "鏈煡",
+    publisherName: "未知",
     isEdit: false,
     editNoticeId: "",
     editPublisherOpenid: "",
@@ -223,11 +223,11 @@ Page({
           canPublish: false,
           isSuperAdmin: false,
           openid: "",
-          publisherName: "鏈煡",
+          publisherName: "未知",
         });
         this.hasCheckedPublishPermission = true;
         wx.showToast({
-          title: "缃戠粶瓒呮椂锛岃绋嶅悗閲嶈瘯",
+          title: "网络超时，请稍后重试",
           icon: "none",
         });
 
@@ -257,7 +257,7 @@ Page({
 
       if (!notice._id) {
         wx.showToast({
-          title: "浜嬮」鏁版嵁寮傚父",
+          title: "事项数据异常",
           icon: "none",
         });
         return;
@@ -266,7 +266,7 @@ Page({
       this.fillEditForm(notice);
     } catch (error) {
       wx.showToast({
-        title: "缂栬緫鏁版嵁寮傚父",
+        title: "编辑数据异常",
         icon: "none",
       });
     }
@@ -286,7 +286,7 @@ Page({
 
     if (!notice._id) {
       wx.showToast({
-        title: "浜嬮」淇℃伅寮傚父",
+        title: "事项信息异常",
         icon: "none",
       });
       return;
@@ -295,7 +295,7 @@ Page({
     this.fillEditForm(notice);
   },
   fillEditForm(notice) {
-    const category = this.normalizeCategory(notice.category || "鑰冭瘯瀹夋帓");
+    const category = this.normalizeCategory(notice.category || "考试安排");
     const categoryIndex = Math.max(this.data.categories.indexOf(category), 0);
     const timeLabelOptions = this.getTimeLabelOptions(category);
     const timeLabel = this.getSafeTimeLabel(notice.timeLabel, category);
@@ -348,7 +348,7 @@ Page({
   changeCategory(e) {
     const categoryIndex = Number(e.detail.value);
     const category = this.data.categories[categoryIndex];
-    const timeLabel = categoryTimeLabelMap[category] || "鐩稿叧鏃堕棿";
+    const timeLabel = categoryTimeLabelMap[category] || "相关时间";
     const safeTimeLabel = this.normalizeTimeLabel(timeLabel);
     const timeLabelOptions = this.getTimeLabelOptions(category);
     const timeConfig = this.getTimeConfig(safeTimeLabel, timeLabelOptions);
@@ -374,25 +374,25 @@ Page({
     this.setData(nextData);
   },
   getCourseLabel(category) {
-    return courseLabelMap[this.normalizeCategory(category)] || "浜嬮」鍚嶇О";
+    return courseLabelMap[this.normalizeCategory(category)] || "事项名称";
   },
   getCoursePlaceholder(category) {
     return coursePlaceholderMap[this.normalizeCategory(category)] || "请输入事项名称";
   },
   getLocationLabel(category) {
-    return locationLabelMap[this.normalizeCategory(category)] || "鍦扮偣";
+    return locationLabelMap[this.normalizeCategory(category)] || "地点";
   },
   getLocationPlaceholder(category) {
-    return locationPlaceholderMap[this.normalizeCategory(category)] || "璇疯緭鍏ュ湴鐐规垨璇存槑";
+    return locationPlaceholderMap[this.normalizeCategory(category)] || "请输入地点或说明";
   },
   normalizeCategory(category) {
-    return category === "姣旇禌娲诲姩" ? "娲诲姩淇℃伅" : category;
+    return category === "比赛活动" ? "活动信息" : category;
   },
   normalizeTimeLabel(timeLabel) {
-    return timeLabel === "浜嬮」鏃堕棿" ? "鐩稿叧鏃堕棿" : timeLabel;
+    return timeLabel === "事项时间" ? "相关时间" : timeLabel;
   },
   getTimeLabelOptions(category) {
-    const categoryConfig = categoryTimeConfigMap[this.normalizeCategory(category)] || categoryTimeConfigMap["鍏朵粬"];
+    const categoryConfig = categoryTimeConfigMap[this.normalizeCategory(category)] || categoryTimeConfigMap["其他"];
 
     return categoryConfig.timeLabelOptions;
   },
@@ -404,11 +404,11 @@ Page({
       return normalizedTimeLabel;
     }
 
-    return categoryTimeLabelMap[this.normalizeCategory(category)] || "鐩稿叧鏃堕棿";
+    return categoryTimeLabelMap[this.normalizeCategory(category)] || "相关时间";
   },
   getTimeConfig(timeLabel, timeLabelOptions = []) {
     const normalizedTimeLabel = this.normalizeTimeLabel(timeLabel);
-    const timeLabelConfig = timeLabelConfigMap[normalizedTimeLabel] || timeLabelConfigMap["鐩稿叧鏃堕棿"];
+    const timeLabelConfig = timeLabelConfigMap[normalizedTimeLabel] || timeLabelConfigMap["相关时间"];
 
     return {
       ...timeLabelConfig,
@@ -426,7 +426,7 @@ Page({
         fileID: image.fileID,
         tempFileURL: image.tempFileURL || image.url || "",
         url: image.url || "",
-        name: image.name || "鍥剧墖",
+        name: image.name || "图片",
         uploadedAt: this.normalizeUploadedAt(image.uploadedAt) || new Date(),
       }));
   },
@@ -438,7 +438,7 @@ Page({
     return attachments
       .filter((attachment) => attachment && attachment.fileID)
       .map((attachment) => {
-        const name = attachment.name || "闄勪欢";
+        const name = attachment.name || "附件";
         const type = this.getAttachmentType(name, attachment.type);
         const size = Number(attachment.size) || 0;
 
@@ -692,13 +692,13 @@ Page({
       const result = res.result || {};
 
       if (!result.success) {
-        this.showError(result.message || "杈呭姪鐢熸垚澶辫触锛岃绋嶅悗閲嶈瘯");
+        this.showError(result.message || "辅助生成失败，请稍后重试");
         return;
       }
 
       this.applyAiDraft(result.draft || {});
     }).catch(() => {
-      this.showError("鏈嶅姟杩炴帴澶辫触锛岃绋嶅悗閲嶈瘯");
+      this.showError("服务连接失败，请稍后重试");
     }).then(() => {
       this.setData({
         aiGenerating: false,
@@ -742,7 +742,7 @@ Page({
   },
   changeAiCategory(e) {
     const aiCategoryIndex = Number(e.detail.value);
-    const category = this.data.categories[aiCategoryIndex] || "鑰冭瘯瀹夋帓";
+    const category = this.data.categories[aiCategoryIndex] || "考试安排";
     const timeLabelOptions = this.getTimeLabelOptions(category);
     const normalizedTimeLabel = this.normalizeTimeLabel(this.data.aiDraft.timeLabel);
     const timeLabel = timeLabelOptions.includes(normalizedTimeLabel)
@@ -760,7 +760,7 @@ Page({
   },
   changeAiTimeLabel(e) {
     const aiTimeLabelIndex = Number(e.detail.value);
-    const timeLabel = this.data.aiTimeLabelOptions[aiTimeLabelIndex] || "鐩稿叧鏃堕棿";
+    const timeLabel = this.data.aiTimeLabelOptions[aiTimeLabelIndex] || "相关时间";
 
     this.setData({
       aiTimeLabelIndex,
@@ -836,7 +836,7 @@ Page({
   getImageName(tempFilePath, index) {
     const fileName = String(tempFilePath || "").split("/").pop();
 
-    return fileName || `鍥剧墖${index + 1}`;
+    return fileName || `图片${index + 1}`;
   },
   removeExistingImage(e) {
     const index = Number(e.currentTarget.dataset.index);
@@ -903,7 +903,7 @@ Page({
           }
 
           if (size > maxAttachmentSize) {
-            this.showError("鏂囦欢涓嶈兘瓒呰繃20MB");
+            this.showError("文件不能超过20MB");
             continue;
           }
 
@@ -929,7 +929,7 @@ Page({
   getFileName(filePath, index) {
     const fileName = String(filePath || "").split("/").pop();
 
-    return fileName || `闄勪欢${index + 1}`;
+    return fileName || `附件${index + 1}`;
   },
   getAttachmentType(name, fallbackType = "") {
     const match = String(name || "").match(/\.([a-zA-Z0-9]+)(?:\?|$)/);
@@ -993,7 +993,7 @@ Page({
     }).catch((error) => {
       wx.hideLoading();
       wx.showToast({
-        title: "涓婁紶澶辫触锛岃妫€鏌ョ綉缁滃悗閲嶈瘯",
+        title: "上传失败，请检查网络后重试",
         icon: "none",
       });
       throw error;
@@ -1041,7 +1041,7 @@ Page({
     }).catch((error) => {
       wx.hideLoading();
       wx.showToast({
-        title: "涓婁紶澶辫触锛岃妫€鏌ョ綉缁滃悗閲嶈瘯",
+        title: "上传失败，请检查网络后重试",
         icon: "none",
       });
       throw error;
@@ -1076,10 +1076,10 @@ Page({
     }
 
     wx.showModal({
-      title: "纭閲嶇疆",
-      content: "纭畾娓呯┖褰撳墠濉啓鍐呭鍚楋紵",
-      cancelText: "鍙栨秷",
-      confirmText: "纭畾",
+      title: "确认重置",
+      content: "确定清空当前填写内容吗？",
+      cancelText: "取消",
+      confirmText: "确定",
       success: (res) => {
         if (!res.confirm) {
           return;
@@ -1104,12 +1104,12 @@ Page({
     }
 
     if (!form.category) {
-      this.showError("璇烽€夋嫨鍒嗙被");
+      this.showError("请选择分类");
       return false;
     }
 
     if (!form.date) {
-      this.showError("璇烽€夋嫨鏃ユ湡");
+      this.showError("请选择日期");
       return false;
     }
 
@@ -1118,7 +1118,7 @@ Page({
     }
 
     if (!form.endDate && form.endClock) {
-      this.showError("璇峰厛閫夋嫨缁撴潫鏃ユ湡");
+      this.showError("请先选择结束日期");
       return false;
     }
 
@@ -1163,7 +1163,7 @@ Page({
       }
 
       if (title && !url) {
-        this.showError("璇峰～鍐欓摼鎺ュ湴鍧€");
+        this.showError("请填写链接地址");
         return null;
       }
 
@@ -1223,7 +1223,7 @@ Page({
 
     if (!this.data.canPublish) {
       wx.showToast({
-        title: "鏆傛棤鍙戝竷鏉冮檺",
+        title: "暂无发布权限",
         icon: "none",
       });
       return;
@@ -1231,7 +1231,7 @@ Page({
 
     if (this.data.isEdit && !this.canEditCurrentNotice()) {
       wx.showToast({
-        title: "鏆傛棤鎿嶄綔鏉冮檺",
+        title: "暂无操作权限",
         icon: "none",
       });
       return;
@@ -1252,7 +1252,7 @@ Page({
 
     if (isEdit && !noticeId) {
       wx.showToast({
-        title: "浜嬮」淇℃伅寮傚父",
+        title: "事项信息异常",
         icon: "none",
       });
       return;
@@ -1296,13 +1296,13 @@ Page({
 
     const existingImages = this.data.existingImages.map((image) => ({
       fileID: image.fileID,
-      name: image.name || "鍥剧墖",
+      name: image.name || "图片",
       uploadedAt: image.uploadedAt,
     }));
     const images = existingImages.concat(uploadedImages);
     const existingAttachments = this.data.existingAttachments.map((attachment) => ({
       fileID: attachment.fileID,
-      name: attachment.name || "闄勪欢",
+      name: attachment.name || "附件",
       size: Number(attachment.size) || 0,
       type: String(attachment.type || this.getAttachmentType(attachment.name)).toLowerCase(),
       uploadedAt: attachment.uploadedAt,
@@ -1338,7 +1338,7 @@ Page({
     } catch (error) {
       wx.hideLoading();
       wx.showToast({
-        title: isEdit ? "淇敼澶辫触" : "鍙戝竷澶辫触",
+        title: isEdit ? "修改失败" : "发布失败",
         icon: "none",
       });
     } finally {
@@ -1357,10 +1357,10 @@ Page({
 
     if (!title) return "请填写标题";
     if (title.length > 30) return "标题不能超过30字";
-    if (!this.data.categories.includes(category)) return "璇烽€夋嫨鍒嗙被";
-    if (!allTimeLabels.includes(timeLabel)) return "璇烽€夋嫨鏃堕棿绫诲瀷";
-    if (!this.data.aiDeadlineDate) return "璇烽€夋嫨鏃ユ湡";
-    if (this.data.aiEndTime && !this.data.aiEndDate) return "璇峰厛閫夋嫨缁撴潫鏃ユ湡";
+    if (!this.data.categories.includes(category)) return "请选择分类";
+    if (!allTimeLabels.includes(timeLabel)) return "请选择时间类型";
+    if (!this.data.aiDeadlineDate) return "请选择日期";
+    if (this.data.aiEndTime && !this.data.aiEndDate) return "请先选择结束日期";
     if (this.data.aiEndDate && this.data.aiEndDate < this.data.aiDeadlineDate) return "结束时间必须晚于开始时间";
     if (this.data.aiEndDate === this.data.aiDeadlineDate && this.data.aiDeadlineTime && this.data.aiEndTime && this.data.aiEndTime <= this.data.aiDeadlineTime) {
       return "结束时间必须晚于开始时间";
@@ -1412,7 +1412,7 @@ Page({
     }
 
     if (!this.data.canPublish) {
-      this.showError("鏆傛棤鍙戝竷鏉冮檺");
+      this.showError("暂无发布权限");
       return;
     }
 
@@ -1448,7 +1448,7 @@ Page({
     } catch (error) {
       wx.hideLoading();
       wx.showToast({
-        title: "鍙戝竷澶辫触",
+        title: "发布失败",
         icon: "none",
       });
     } finally {
@@ -1503,7 +1503,7 @@ Page({
           submitting: false,
         });
         wx.showToast({
-          title: result.message || (isEdit ? "淇敼澶辫触" : "鍙戝竷澶辫触"),
+          title: result.message || (isEdit ? "修改失败" : "发布失败"),
           icon: "none",
         });
         return;
@@ -1514,7 +1514,7 @@ Page({
         submitting: false,
       });
 
-      let toastTitle = isEdit ? "淇敼鎴愬姛" : "鍙戝竷鎴愬姛";
+      let toastTitle = isEdit ? "修改成功" : "发布成功";
       let toastIcon = "success";
 
       if (!isEdit) {
@@ -1544,7 +1544,7 @@ Page({
         submitting: false,
       });
       wx.showToast({
-        title: isEdit ? "淇敼澶辫触" : "鍙戝竷澶辫触",
+        title: isEdit ? "修改失败" : "发布失败",
         icon: "none",
       });
     }
@@ -1553,12 +1553,12 @@ Page({
     this.setData({
       categoryIndex: 0,
       timeLabelIndex: 0,
-      timeLabelOptions: categoryTimeConfigMap["鑰冭瘯瀹夋帓"].timeLabelOptions,
-      timeConfig: this.getTimeConfig("鑰冭瘯鏃堕棿", categoryTimeConfigMap["鑰冭瘯瀹夋帓"].timeLabelOptions),
-      courseLabel: this.getCourseLabel("鑰冭瘯瀹夋帓"),
-      coursePlaceholder: this.getCoursePlaceholder("鑰冭瘯瀹夋帓"),
-      locationLabel: this.getLocationLabel("鑰冭瘯瀹夋帓"),
-      locationPlaceholder: this.getLocationPlaceholder("鑰冭瘯瀹夋帓"),
+      timeLabelOptions: categoryTimeConfigMap["考试安排"].timeLabelOptions,
+      timeConfig: this.getTimeConfig("考试时间", categoryTimeConfigMap["考试安排"].timeLabelOptions),
+      courseLabel: this.getCourseLabel("考试安排"),
+      coursePlaceholder: this.getCoursePlaceholder("考试安排"),
+      locationLabel: this.getLocationLabel("考试安排"),
+      locationPlaceholder: this.getLocationPlaceholder("考试安排"),
       isEdit: false,
       editNoticeId: "",
       editPublisherOpenid: "",
@@ -1621,7 +1621,7 @@ Page({
         .map((image) => {
           const nextImage = {
             fileID: image.fileID,
-            name: image.name || "鍥剧墖",
+            name: image.name || "图片",
           };
 
           if (image.uploadedAt !== undefined) {
@@ -1638,7 +1638,7 @@ Page({
         .map((attachment) => {
           const nextAttachment = {
             fileID: attachment.fileID,
-            name: attachment.name || "闄勪欢",
+            name: attachment.name || "附件",
             size: Number(attachment.size) || 0,
             type: String(attachment.type || "").toLowerCase(),
           };
@@ -1664,6 +1664,6 @@ Page({
   getPublisherName(name) {
     const publisherName = String(name || "").trim();
 
-    return publisherName || "鏈煡";
+    return publisherName || "未知";
   },
 });
