@@ -52,12 +52,17 @@
   </view>
 
   <view class="content-card" wx:if="{{verified && detail && !notFound}}">
-    <view class="section-title">详细内容</view>
+    <view class="section-title-row">
+      <view class="section-title">详细内容</view>
+    </view>
     <view class="content">{{detail.content}}</view>
   </view>
 
   <view class="content-card" wx:if="{{verified && detail && !notFound && detail.images.length}}">
-    <view class="section-title">相关图片</view>
+    <view class="section-title-row">
+      <view class="section-title">相关图片</view>
+      <view class="section-count">{{detail.images.length}}</view>
+    </view>
     <view class="image-grid">
       <view
         class="image-card"
@@ -72,7 +77,10 @@
   </view>
 
   <view class="content-card" wx:if="{{verified && detail && !notFound && detail.attachments.length}}">
-    <view class="section-title">相关附件</view>
+    <view class="section-title-row">
+      <view class="section-title">相关附件</view>
+      <view class="section-count">{{detail.attachments.length}}</view>
+    </view>
     <view class="attachment-list">
       <view class="attachment-card" wx:for="{{detail.attachments}}" wx:key="fileID">
         <view class="attachment-info">
@@ -85,7 +93,10 @@
   </view>
 
   <view class="content-card" wx:if="{{verified && detail && !notFound && detail.links.length}}">
-    <view class="section-title">相关链接</view>
+    <view class="section-title-row">
+      <view class="section-title">相关链接</view>
+      <view class="section-count">{{detail.links.length}}</view>
+    </view>
     <view class="link-list">
       <view class="link-card" wx:for="{{detail.links}}" wx:key="url">
         <view class="link-info">

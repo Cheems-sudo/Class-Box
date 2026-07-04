@@ -156,3 +156,167 @@ page {
   font-size: 23rpx;
   line-height: 1.45;
 }
+
+/* TDesign-inspired visual refresh */
+page {
+  background: #f6f8fb;
+}
+
+.page {
+  padding: 24rpx 28rpx 54rpx;
+}
+
+.profile-card,
+.feature-section {
+  border-radius: 24rpx;
+  border-color: #e7ecf3;
+  box-shadow: 0 12rpx 34rpx rgba(15, 23, 42, 0.055);
+}
+
+.profile-card {
+  position: relative;
+  overflow: hidden;
+  padding: 32rpx;
+}
+
+.profile-card::before {
+  content: "";
+  position: absolute;
+  right: -72rpx;
+  top: -76rpx;
+  width: 236rpx;
+  height: 236rpx;
+  border-radius: 999rpx;
+  background: rgba(0, 82, 217, 0.08);
+}
+
+.profile-main,
+.badge-row,
+.verify-button {
+  position: relative;
+  z-index: 1;
+}
+
+.profile-name {
+  color: #111827;
+  font-size: 44rpx;
+  font-weight: 800;
+}
+
+.profile-name.muted {
+  color: #4e5969;
+}
+
+.profile-student-id {
+  color: #667085;
+}
+
+.badge {
+  min-height: 46rpx;
+  border-radius: 999rpx;
+  background: #f2f4f7;
+  color: #4e5969;
+  font-weight: 700;
+}
+
+.badge.success {
+  background: #e8f8f1;
+  color: #008858;
+}
+
+.badge.warning {
+  background: #fff7e8;
+  color: #b76e00;
+}
+
+.badge.admin {
+  background: #edf3ff;
+  color: #0052d9;
+}
+
+.verify-button {
+  border-radius: 16rpx;
+  background: #0052d9;
+  font-weight: 800;
+  box-shadow: 0 10rpx 22rpx rgba(0, 82, 217, 0.18);
+}
+
+.feature-section {
+  margin-top: 20rpx;
+  padding: 30rpx;
+}
+
+.section-title {
+  color: #111827;
+  font-size: 32rpx;
+  font-weight: 800;
+}
+
+.feature-grid {
+  gap: 16rpx;
+}
+
+.feature-item {
+  min-height: 142rpx;
+  padding: 22rpx;
+  border-radius: 20rpx;
+  background: #f8fafc;
+  border-color: #e3e8ef;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 16rpx;
+}
+
+.feature-item:active {
+  background: #edf3ff;
+}
+
+.feature-icon {
+  flex: 0 0 auto;
+  width: 58rpx;
+  height: 58rpx;
+  border-radius: 18rpx;
+  background: #edf3ff;
+  color: #0052d9;
+  font-size: 24rpx;
+  font-weight: 800;
+  line-height: 58rpx;
+  text-align: center;
+}
+
+.feature-icon.green {
+  background: #e8f8f1;
+  color: #008858;
+}
+
+.feature-icon.purple {
+  background: #f4edff;
+  color: #722ed1;
+}
+
+.feature-icon.orange {
+  background: #fff7e8;
+  color: #b76e00;
+}
+
+.feature-icon.muted {
+  background: #eef1f5;
+  color: #86909c;
+}
+
+.feature-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.feature-title {
+  color: #111827;
+  font-size: 28rpx;
+  font-weight: 800;
+}
+
+.feature-desc,
+.feature-note {
+  color: #86909c;
+}

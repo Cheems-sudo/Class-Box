@@ -1,7 +1,19 @@
 <view class="page">
-  <view class="header">
-    <view class="title">事项概览</view>
-    <view class="subtitle">进行中 {{runningNoticeCount}} 项，重要事项 {{importantNoticeCount}} 项</view>
+  <view class="hero">
+    <view class="hero-main">
+      <view class="title">事项概览</view>
+    </view>
+    <view class="hero-stats">
+      <view class="stat-item">
+        <view class="stat-value">{{runningNoticeCount}}</view>
+        <view class="stat-label">进行中</view>
+      </view>
+      <view class="stat-divider"></view>
+      <view class="stat-item">
+        <view class="stat-value important-stat">{{importantNoticeCount}}</view>
+        <view class="stat-label">重要</view>
+      </view>
+    </view>
   </view>
 
   <view class="state-card verify-card" wx:if="{{authLoading}}">
@@ -18,7 +30,10 @@
   <block wx:else>
   <view class="important-section" wx:if="{{importantNoticeList.length}}">
     <view class="section-head">
-      <view class="important-title">重要事项</view>
+      <view>
+        <view class="section-eyebrow">重点提醒</view>
+        <view class="important-title">重要事项</view>
+      </view>
       <view class="section-count">{{importantNoticeList.length}} 项</view>
     </view>
     <view

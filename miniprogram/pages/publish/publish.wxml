@@ -10,8 +10,6 @@
   </view>
 
   <view wx:elif="{{canPublish}}">
-    <view class="page-title">{{isEdit ? '编辑事项' : '发布班务事项'}}</view>
-
     <view wx:if="{{!isEdit && publishMode != 'manual'}}" class="publish-mode-list">
       <view class="publish-mode-card ai-mode-card" bindtap="selectAiPublishMode" hover-class="mode-card-hover">
         <view class="mode-card-top">
@@ -38,7 +36,10 @@
     <button wx:if="{{!isEdit}}" class="mode-back-button" bindtap="resetPublishMode" hover-class="button-hover">重新选择发布方式</button>
 
     <view class="form-section">
-      <view class="section-title">基础信息</view>
+      <view class="section-title-row">
+        <view class="section-title">基础信息</view>
+        <view class="section-index">01</view>
+      </view>
 
       <view class="field">
         <view class="label required">标题</view>
@@ -81,7 +82,10 @@
     </view>
 
     <view class="form-section">
-      <view class="section-title">时间信息</view>
+      <view class="section-title-row">
+        <view class="section-title">时间信息</view>
+        <view class="section-index">02</view>
+      </view>
 
       <view class="field" wx:if="{{timeConfig.showTimeLabelPicker}}">
         <view class="label required">时间类型</view>
@@ -119,7 +123,10 @@
     </view>
 
     <view class="form-section">
-      <view class="section-title">详细内容</view>
+      <view class="section-title-row">
+        <view class="section-title">详细内容</view>
+        <view class="section-index">03</view>
+      </view>
 
       <view class="field">
         <view class="label required">详细内容</view>
@@ -143,7 +150,10 @@
     </view>
 
     <view class="form-section">
-      <view class="section-title">相关图片</view>
+      <view class="section-title-row">
+        <view class="section-title">相关图片</view>
+        <view class="section-index">04</view>
+      </view>
       <view class="section-desc">最多上传6张图片</view>
 
       <view class="image-toolbar">
@@ -163,7 +173,10 @@
     </view>
 
     <view class="form-section">
-      <view class="section-title">相关附件</view>
+      <view class="section-title-row">
+        <view class="section-title">相关附件</view>
+        <view class="section-index">05</view>
+      </view>
       <view class="section-desc">附件将从微信聊天文件中选择，首次加载可能较慢；较大附件建议使用电脑端上传，体验更稳定</view>
 
       <view class="image-toolbar">
@@ -190,7 +203,10 @@
     </view>
 
     <view class="form-section">
-      <view class="section-title">相关链接</view>
+      <view class="section-title-row">
+        <view class="section-title">相关链接</view>
+        <view class="section-index">06</view>
+      </view>
 
       <view class="image-toolbar">
         <button class="secondary-button" bindtap="addLink" disabled="{{form.links.length >= maxLinkCount}}">添加链接</button>
