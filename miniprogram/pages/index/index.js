@@ -325,7 +325,7 @@ Page({
     const end = this.parseTimeValue(endTime);
 
     if (start.date && start.time && end.date && end.time && start.date === end.date) {
-      return `${start.date} ${start.time} - ${end.time}`;
+      return `${this.formatDisplayDate(start.date)} ${start.time} - ${end.time}`;
     }
 
     return `${this.formatSingleTime(deadline)} - ${this.formatSingleTime(endTime)}`;
@@ -345,7 +345,21 @@ Page({
       return "";
     }
 
-    return time ? `${date} ${time}` : `${date}，具体时间待定`;
+    const displayDate = this.formatDisplayDate(date);
+
+    return time ? `${displayDate} ${time}` : `${displayDate}，具体时间待定`;
+  },
+  formatDisplayDate(date) {
+    const dateText = String(date || "").trim();
+    const parsedDate = new Date(`${dateText} 00:00:00`.replace(/-/g, "/"));
+
+    if (!dateText || Number.isNaN(parsedDate.getTime())) {
+      return dateText;
+    }
+
+    const weekDays = ["日", "一", "二", "三", "四", "五", "六"];
+
+    return `${dateText}(${weekDays[parsedDate.getDay()]})`;
   },
   parseNoticeTime(value) {
     if (!value) {
