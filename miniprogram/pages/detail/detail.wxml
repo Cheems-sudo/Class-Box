@@ -79,7 +79,7 @@
           <view class="attachment-name">{{item.name}}</view>
           <view class="attachment-size">{{item.formattedSize}}</view>
         </view>
-        <button class="attachment-open-button" data-index="{{index}}" bindtap="openAttachment">打开</button>
+        <view class="attachment-open-button" data-index="{{index}}" bindtap="openAttachment">打开</view>
       </view>
     </view>
   </view>

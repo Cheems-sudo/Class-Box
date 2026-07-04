@@ -255,9 +255,9 @@ page {
   align-items: center;
   justify-content: center;
   margin-left: auto;
-  width: 52rpx;
+  width: 96rpx;
   min-width: 0;
-  height: 44rpx;
+  height: 52rpx;
   padding: 0;
   border-radius: 8rpx;
   box-sizing: border-box;
