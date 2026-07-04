@@ -12,21 +12,27 @@
   <view class="state-card verify-card" wx:elif="{{!verified}}">
     <view class="state-title">请先完成班级身份验证</view>
     <view class="state-desc">验证后即可查看班级事项列表</view>
-    <button class="verify-button" bindtap="goMemberVerify">去验证</button>
+    <button class="verify-button" bindtap="goMemberVerify" hover-class="button-pressed" hover-stay-time="80">去验证</button>
   </view>
 
   <block wx:else>
   <view class="important-section" wx:if="{{importantNoticeList.length}}">
-    <view class="important-title">重要事项</view>
+    <view class="section-head">
+      <view class="important-title">重要事项</view>
+      <view class="section-count">{{importantNoticeList.length}} 项</view>
+    </view>
     <view
       class="important-card category-{{item.categoryClass}}"
       wx:for="{{importantNoticeList}}"
       wx:key="_id"
       data-notice-id="{{item._id}}"
       bindtap="goDetail"
+      hover-class="card-pressed"
+      hover-stay-time="80"
     >
       <view class="important-main">
         <view class="tag">{{item.displayCategory || item.category}}</view>
+        <view class="pin-tag" wx:if="{{item.isPinned}}">置顶</view>
         <view class="important-card-title">{{item.title}}</view>
       </view>
       <view class="important-time">
@@ -67,6 +73,8 @@
           wx:key="value"
           data-category="{{item.value}}"
           bindtap="changeCategory"
+          hover-class="filter-pressed"
+          hover-stay-time="80"
         >
           {{item.label}}
         </view>
@@ -82,6 +90,8 @@
         wx:key="*this"
         data-status="{{item}}"
         bindtap="changeStatus"
+        hover-class="filter-pressed"
+        hover-stay-time="80"
       >
         {{item}}
       </view>
@@ -106,6 +116,8 @@
         wx:key="_id"
         data-index="{{index}}"
         bindtap="goDetail"
+        hover-class="card-pressed"
+        hover-stay-time="80"
       >
         <view class="card-top">
           <view class="tag-row">
@@ -136,8 +148,19 @@
         </view>
       </view>
       <view class="state-card empty" wx:if="{{filteredNoticeList.length == 0}}">
-        <view class="state-title">{{noticeList.length == 0 ? '暂无班级事项' : '暂无相关事项，可切换筛选条件查看'}}</view>
-        <view class="state-desc">{{noticeList.length == 0 ? '发布后的事项会显示在这里' : '可以调整筛选条件或搜索关键词'}}</view>
+        <view class="empty-mark">{{noticeList.length == 0 ? '待' : '空'}}</view>
+        <block wx:if="{{noticeList.length == 0}}">
+          <view class="state-title">暂无班级事项</view>
+          <view class="state-desc">发布后的事项会显示在这里</view>
+        </block>
+        <block wx:elif="{{searchKeyword}}">
+          <view class="state-title">没有找到匹配事项</view>
+          <view class="state-desc">可以换个关键词，或切换分类和状态筛选</view>
+        </block>
+        <block wx:else>
+          <view class="state-title">暂无相关事项</view>
+          <view class="state-desc">可以切换分类或状态查看其他事项</view>
+        </block>
       </view>
     </block>
   </view>

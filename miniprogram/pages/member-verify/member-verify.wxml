@@ -25,6 +25,8 @@
       />
     </view>
 
+    <view class="error-message" wx:if="{{errorMessage}}">{{errorMessage}}</view>
+
     <button class="submit-button" loading="{{submitting}}" disabled="{{submitting}}" bindtap="submitVerify">验证并进入</button>
   </view>
 </view>

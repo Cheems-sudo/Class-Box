@@ -56,6 +56,17 @@ page {
   color: #94a3b8;
 }
 
+.error-message {
+  margin-top: 24rpx;
+  padding: 18rpx 20rpx;
+  border-radius: 12rpx;
+  background: #fff5f5;
+  border: 1rpx solid #fecaca;
+  color: #991b1b;
+  font-size: 25rpx;
+  line-height: 1.45;
+}
+
 .submit-button {
   margin-top: 36rpx;
   height: 86rpx;
