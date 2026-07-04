@@ -10,10 +10,10 @@
 4. 复制 `miniprogram/config.example.js` 为 `miniprogram/config.js`，填入自己的云环境 ID 和订阅消息模板 ID。
 5. 复制 `cloudfunctions/sendNoticeMessage/config.example.js` 为 `cloudfunctions/sendNoticeMessage/config.js`，填入自己的订阅消息模板 ID。
 6. 复制 `cloudfunctions/saveNoticeSubscriber/config.example.js` 为 `cloudfunctions/saveNoticeSubscriber/config.js`，填入同一个订阅消息模板 ID。
-7. 如需启用 AI 辅助发布，在云函数环境变量或服务端配置中设置：
+7. 如需启用 AI 辅助发布，在 `parseNoticeWithAI` 云函数环境变量或服务端配置中设置：
    - `AI_API_KEY`
-   - `AI_BASE_URL`
-   - `AI_MODEL`，例如 `hy3-preview`
+   - `AI_BASE_URL`，应指向兼容 `/chat/completions` 的服务根地址
+   - `AI_MODEL`，未设置时云函数会使用内置默认模型名
 
 不要提交以下文件：
 
@@ -31,7 +31,6 @@
 
 - `applyAdminInvite`
 - `checkAdmin`
-- `contentSecurityCheck`
 - `createNotice`
 - `deleteNotice`
 - `parseNoticeWithAI`
@@ -41,9 +40,11 @@
 - `updateNoticePin`
 - `verifyMember`
 
-其中 `contentSecurityCheck`、`createNotice`、`updateNotice` 需要使用微信内容安全相关 OpenAPI 权限，包括文本检测和图片检测。`parseNoticeWithAI` 需要使用文本内容安全检测权限，并需要能访问配置的 AI 服务地址。
+其中 `createNotice`、`updateNotice` 会在云函数内部使用微信内容安全相关 OpenAPI 权限，包括文本检测和图片检测。`parseNoticeWithAI` 会先对管理员输入进行文本内容安全检测，再访问配置的 AI 服务地址生成草稿。
 
 `sendNoticeMessage/config.json` 已声明订阅消息发送 OpenAPI 权限，部署时请确认该权限配置生效。
+
+`parseNoticeWithAI/config.json` 已声明文本内容安全检测 OpenAPI 权限，部署时也请确认该权限配置生效。AI 辅助发布只生成草稿，不会直接写入 `notices`；管理员确认发布时仍会走 `createNotice` 的权限校验和内容安全检测。
 
 ## 3. 创建数据库集合
 
@@ -170,7 +171,7 @@
 - 所有云函数已部署。
 - 数据库集合已创建。
 - `security_counters` 和 `operation_logs` 已创建且权限收紧。
-- 如启用 AI 辅助发布，`parseNoticeWithAI` 已部署，`AI_API_KEY`、`AI_BASE_URL`、`AI_MODEL` 已在云函数环境或服务端配置中设置。
+- 如启用 AI 辅助发布，`parseNoticeWithAI` 已部署，`AI_API_KEY`、`AI_BASE_URL`、`AI_MODEL` 已在该云函数环境或服务端配置中设置。
 - 班级成员数据已导入。
 - 管理员/超级管理员邀请码已创建。
 - 订阅消息模板 ID 已配置。
