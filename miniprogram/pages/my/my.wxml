@@ -60,6 +60,22 @@
           <view class="feature-desc">使用邀请码开通</view>
         </view>
       </view>
+
+      <view class="feature-item" bindtap="goFeedback">
+        <view class="feature-icon blue">💬</view>
+        <view class="feature-copy">
+          <view class="feature-title">意见反馈</view>
+          <view class="feature-desc">提交问题和建议</view>
+        </view>
+      </view>
+
+      <view class="feature-item" wx:if="{{role === 'superAdmin'}}" bindtap="goFeedbackAdmin">
+        <view class="feature-icon cyan">📬</view>
+        <view class="feature-copy">
+          <view class="feature-title">查看反馈</view>
+          <view class="feature-desc">查看用户提交内容</view>
+        </view>
+      </view>
     </view>
     <view class="feature-note">订阅消息为一次性授权，发送后需重新订阅。</view>
   </view>

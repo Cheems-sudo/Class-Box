@@ -33,18 +33,22 @@
 - `checkAdmin`
 - `createNotice`
 - `deleteNotice`
+- `listFeedbacks`
 - `parseNoticeWithAI`
 - `saveNoticeSubscriber`
 - `sendNoticeMessage`
+- `submitFeedback`
 - `updateNotice`
 - `updateNoticePin`
 - `verifyMember`
 
-其中 `createNotice`、`updateNotice` 会在云函数内部使用微信内容安全相关 OpenAPI 权限，包括文本检测和图片检测。`parseNoticeWithAI` 会先对管理员输入进行文本内容安全检测，再访问配置的 AI 服务地址生成草稿。
+其中 `createNotice`、`updateNotice` 会在云函数内部使用微信内容安全相关 OpenAPI 权限，包括文本检测和图片检测。`submitFeedback` 会在反馈写入前进行文本内容安全检测。`parseNoticeWithAI` 会先对管理员输入进行文本内容安全检测，再访问配置的 AI 服务地址生成草稿。
 
 `sendNoticeMessage/config.json` 已声明订阅消息发送 OpenAPI 权限，部署时请确认该权限配置生效。
 
 `parseNoticeWithAI/config.json` 已声明文本内容安全检测 OpenAPI 权限，部署时也请确认该权限配置生效。AI 辅助发布只生成草稿，不会直接写入 `notices`；管理员确认发布时仍会走 `createNotice` 的权限校验和内容安全检测。
+
+`submitFeedback/config.json` 已声明文本内容安全检测 OpenAPI 权限，部署时请确认该权限配置生效。
 
 ## 3. 创建数据库集合
 
@@ -56,11 +60,14 @@
 - `class_members`
 - `subscribers`
 - `favorites`
+- `feedbacks`
 - `security_counters`
 - `ai_usage_logs`
 - `operation_logs`
 
-`security_counters` 使用固定时间桶记录发布、编辑、邀请码尝试等频率限制计数。
+`feedbacks` 用于保存用户提交的意见反馈，建议只允许通过 `submitFeedback` 云函数写入，并通过 `listFeedbacks` 云函数供超级管理员只读查看。
+
+`security_counters` 使用固定时间桶记录发布、编辑、邀请码尝试、反馈提交等频率限制计数。
 
 `ai_usage_logs` 用于记录 AI 辅助发布的调用情况，不保存用户输入原文或 AI 返回完整正文。
 
@@ -78,6 +85,7 @@
 - `notices.publisherOpenid`
 - `favorites.openid`
 - `favorites.noticeId`
+- `feedbacks.createdAt` + `feedbacks._id` 组合倒序索引，用于超级管理员反馈列表游标分页
 - `security_counters.openid`
 - `security_counters.action`
 - `security_counters.windowStart`
@@ -93,6 +101,7 @@
 
 - 普通用户不应直接写入 `notices`，发布应通过 `createNotice` 云函数。
 - 普通用户不应直接写入 `subscribers`，订阅授权应通过 `saveNoticeSubscriber` 云函数保存。
+- 普通用户不应直接读写 `feedbacks`，反馈提交应通过 `submitFeedback` 云函数，超级管理员查看应通过 `listFeedbacks` 云函数。
 - 普通用户不应直接写入 `security_counters`。
 - 普通用户不应直接读写 `ai_usage_logs`。
 - 普通用户不应直接写入 `operation_logs`。
@@ -169,8 +178,9 @@
 发布前建议检查：
 
 - 所有云函数已部署。
+- 超级管理员查看反馈前，`listFeedbacks` 已部署。
 - 数据库集合已创建。
-- `security_counters` 和 `operation_logs` 已创建且权限收紧。
+- `feedbacks`、`security_counters` 和 `operation_logs` 已创建且权限收紧。
 - 如启用 AI 辅助发布，`parseNoticeWithAI` 已部署，`AI_API_KEY`、`AI_BASE_URL`、`AI_MODEL` 已在该云函数环境或服务端配置中设置。
 - 班级成员数据已导入。
 - 管理员/超级管理员邀请码已创建。

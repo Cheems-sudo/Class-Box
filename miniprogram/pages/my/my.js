@@ -89,6 +89,20 @@ Page({
       url: "/pages/my-posts/my-posts",
     });
   },
+  goFeedback() {
+    wx.navigateTo({
+      url: "/pages/feedback/feedback",
+    });
+  },
+  goFeedbackAdmin() {
+    if (this.data.verified !== true || this.data.role !== "superAdmin") {
+      return;
+    }
+
+    wx.navigateTo({
+      url: "/pages/feedback-admin/feedback-admin",
+    });
+  },
   noop() {},
   subscribeNextNotice() {
     if (this.data.subscribeLoading) {

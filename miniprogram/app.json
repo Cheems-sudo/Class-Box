@@ -5,6 +5,8 @@
     "pages/publish/publish",
     "pages/favorites/favorites",
     "pages/my-posts/my-posts",
+    "pages/feedback/feedback",
+    "pages/feedback-admin/feedback-admin",
     "pages/admin-auth/admin-auth",
     "pages/member-verify/member-verify",
     "pages/my/my"

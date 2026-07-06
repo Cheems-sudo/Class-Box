@@ -1,0 +1,14 @@
+{
+  "name": "listFeedbacks",
+  "version": "1.0.0",
+  "description": "Lists user feedback for super administrators",
+  "main": "index.js",
+  "scripts": {
+    "test": "node --check index.js"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "wx-server-sdk": "3.0.4"
+  }
+}

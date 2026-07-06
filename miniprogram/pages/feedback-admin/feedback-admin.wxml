@@ -1,0 +1,39 @@
+<view class="page">
+  <view class="header">
+    <view class="title">用户反馈</view>
+    <view class="subtitle">查看用户提交的问题和建议</view>
+  </view>
+
+  <view class="state-card" wx:if="{{loading}}">
+    <view class="state-title">反馈加载中</view>
+    <view class="state-desc">正在读取最新反馈</view>
+  </view>
+
+  <view class="state-card error" wx:elif="{{errorMessage}}">
+    <view class="state-title">{{errorMessage}}</view>
+    <view class="state-desc">请确认当前账号权限或稍后重试</view>
+    <button class="retry-button" bindtap="retryLoad">重新加载</button>
+  </view>
+
+  <view class="state-card" wx:elif="{{!feedbackList.length}}">
+    <view class="state-title">暂无反馈</view>
+    <view class="state-desc">用户提交后会显示在这里</view>
+  </view>
+
+  <view class="feedback-list" wx:else>
+    <view
+      class="feedback-card"
+      wx:for="{{feedbackList}}"
+      wx:key="id"
+    >
+      <view class="feedback-meta">
+        <view class="feedback-user">{{item.userName}}</view>
+        <view class="feedback-time">{{item.createdAtText}}</view>
+      </view>
+      <view class="feedback-content">{{item.content}}</view>
+    </view>
+
+    <view class="list-footer" wx:if="{{loadingMore}}">加载中</view>
+    <view class="list-footer" wx:elif="{{!hasMore}}">已显示全部反馈</view>
+  </view>
+</view>

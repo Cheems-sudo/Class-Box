@@ -1,0 +1,14 @@
+{
+  "name": "submitFeedback",
+  "version": "1.0.0",
+  "description": "Submits verified user feedback with validation and rate limits",
+  "main": "index.js",
+  "scripts": {
+    "test": "node --check index.js"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "wx-server-sdk": "3.0.4"
+  }
+}

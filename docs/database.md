@@ -218,6 +218,48 @@
 }
 ```
 
+## feedbacks
+
+用途：保存已认证用户提交的问题、建议和体验反馈。首版支持用户提交与超级管理员只读查看，不提供回复、删除、处理流转或导出。
+
+主要字段：
+
+| 字段 | 含义 |
+| --- | --- |
+| `_id` | 云数据库自动生成的记录 ID |
+| `openid` | 提交用户 openid |
+| `userName` | 提交用户姓名 |
+| `studentId` | 提交用户学号 |
+| `role` | 提交时用户角色，支持 `user`、`admin`、`superAdmin` |
+| `content` | 反馈内容 |
+| `status` | 处理状态，首版默认 `pending` |
+| `createdAt` | 反馈提交时间 |
+| `updatedAt` | 更新时间，首版与 `createdAt` 一致 |
+
+示例数据：
+
+```json
+{
+  "openid": "openid_example",
+  "userName": "示例学生",
+  "studentId": "2026000000",
+  "role": "user",
+  "content": "希望首页可以支持按课程筛选事项。",
+  "status": "pending",
+  "createdAt": "2026-07-06T12:00:00.000Z",
+  "updatedAt": "2026-07-06T12:00:00.000Z"
+}
+```
+
+超级管理员查看反馈页通过 `listFeedbacks` 云函数读取数据，不开放客户端直接读取 `feedbacks`。页面只展示以下字段：
+
+| 字段 | 含义 |
+| --- | --- |
+| `id` | 反馈记录 ID，用于列表渲染 |
+| `userName` | 反馈人姓名 |
+| `content` | 反馈内容 |
+| `createdAt` | 反馈提交时间 |
+
 ## security_counters
 
 用途：使用固定时间桶记录发布、编辑、邀请码尝试等频率限制计数。该集合应只允许云函数写入，普通用户不应直接写入。
@@ -228,7 +270,7 @@
 | --- | --- |
 | `_id` | 由动作、openid 和时间桶组成的确定性记录 ID |
 | `openid` | 操作用户 openid |
-| `action` | 计数动作，例如 `create_notice`、`update_notice`、`apply_admin_attempt` |
+| `action` | 计数动作，例如 `create_notice`、`update_notice`、`apply_admin_attempt`、`submit_feedback` |
 | `count` | 当前时间桶内的计数值 |
 | `windowStart` | 当前固定时间桶的开始时间 |
 | `windowMs` | 时间桶长度，单位毫秒 |

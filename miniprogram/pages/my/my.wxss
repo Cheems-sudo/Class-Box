@@ -300,6 +300,16 @@ page {
   color: #b76e00;
 }
 
+.feature-icon.blue {
+  background: #e6f4ff;
+  color: #0052d9;
+}
+
+.feature-icon.cyan {
+  background: #e6fffb;
+  color: #08979c;
+}
+
 .feature-icon.muted {
   background: #eef1f5;
   color: #86909c;
