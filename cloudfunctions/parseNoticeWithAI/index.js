@@ -1,6 +1,5 @@
 const cloud = require("wx-server-sdk");
-const http = require("http");
-const https = require("https");
+const tcb = require("@cloudbase/node-sdk");
 
 cloud.init({
   env: cloud.DYNAMIC_CURRENT_ENV,
@@ -9,6 +8,8 @@ cloud.init({
 const db = cloud.database();
 const inputMaxLength = 500;
 const aiTimeoutMs = 20000;
+const aiApp = tcb.init({ env: tcb.SYMBOL_CURRENT_ENV, timeout: aiTimeoutMs });
+const aiModel = aiApp.ai().createModel("cloudbase");
 const categories = ["考试安排", "作业信息", "活动信息", "班级通知", "其他"];
 const timeLabels = ["考试时间", "截止时间", "报名截止", "活动时间", "相关时间"];
 const stringLimits = {
@@ -39,7 +40,11 @@ const getErrorCode = (value) => Number(value && (value.errCode !== undefined ? v
 const logSafeError = (action, error) => {
   console.error(action, {
     type: error && error.name ? error.name : "Error",
-    code: getErrorCode(error),
+    code: String(error && (error.code || error.errCode || error.errcode) || ""),
+    errorType: String(error && error.errorType || ""),
+    statusCode: Number(error && (error.statusCode || error.status)) || 0,
+    requestId: String(error && (error.requestId || error.request_id) || ""),
+    channel: "cloudbase-node-sdk",
     rejected: Boolean(error && error.securityRejected),
   });
 };
@@ -47,15 +52,8 @@ const logSafeError = (action, error) => {
 const getSafeEnv = (name) => String(process.env[name] || "").trim();
 
 const getAiConfig = () => {
-  const apiKey = getSafeEnv("AI_API_KEY");
-  const baseUrl = getSafeEnv("AI_BASE_URL").replace(/\/+$/, "");
-  const model = getSafeEnv("AI_MODEL") || "hunyuan-2.0-instruct-20251111";
-
-  if (!apiKey || !baseUrl || !model) {
-    return null;
-  }
-
-  return { apiKey, baseUrl, model };
+  const model = getSafeEnv("AI_MODEL") || "hy3-preview";
+  return { model };
 };
 
 const getChinaTime = (date) => {
@@ -214,73 +212,44 @@ endTime 是完整结束时间，例如 2026-07-03 18:00。
 返回示例：
 {"title":"","category":"","timeLabel":"","course":"","deadline":"","endTime":"","location":"","content":"","isImportant":false,"warnings":[]}`;
 
-const requestAi = (config, messages) => new Promise((resolve, reject) => {
-  let url;
+const classifyAiError = (error) => {
+  const source = error && typeof error === "object" ? error : {};
+  const message = String(source.message || error || "").toLowerCase();
+  const code = String(source.code || source.errCode || "").toLowerCase();
+  const statusCode = Number(source.statusCode || source.status) || 0;
+  const haystack = `${code} ${message}`;
 
+  if (statusCode === 401 || haystack.includes("invalid_api_key") || haystack.includes("authentication")) return "auth";
+  if (statusCode === 403 || haystack.includes("permission") || haystack.includes("not_allowed")) return "permission";
+  if (haystack.includes("token_quota") || haystack.includes("quota") || haystack.includes("insufficient")) return "quota";
+  if (statusCode === 429 || haystack.includes("rate") || haystack.includes("too many requests")) return "rate_limit";
+  if (statusCode === 404 || haystack.includes("model_not_found") || haystack.includes("model_disabled") || haystack.includes("config_missing")) return "config";
+  if (haystack.includes("timeout") || haystack.includes("timed out")) return "timeout";
+
+  return "network";
+};
+
+const requestAi = async (config, messages) => {
   try {
-    url = new URL(`${config.baseUrl}/chat/completions`);
+    const result = await aiModel.generateText({
+      model: config.model,
+      messages,
+      temperature: 0.2,
+    }, {
+      timeout: aiTimeoutMs,
+    });
+
+    if (result.error) {
+      throw result.error;
+    }
+
+    return String(result.text || "");
   } catch (error) {
-    reject(Object.assign(new Error("Invalid AI base url"), { errorType: "config" }));
-    return;
+    throw Object.assign(error instanceof Error ? error : new Error("AI SDK request failed"), {
+      errorType: error && error.errorType || classifyAiError(error),
+    });
   }
-
-  const payload = JSON.stringify({
-    model: config.model,
-    messages,
-    temperature: 0.2,
-  });
-  const client = url.protocol === "http:" ? http : https;
-  const req = client.request({
-    method: "POST",
-    hostname: url.hostname,
-    port: url.port || undefined,
-    path: `${url.pathname}${url.search}`,
-    headers: {
-      Authorization: `Bearer ${config.apiKey}`,
-      "Content-Type": "application/json",
-      "Content-Length": Buffer.byteLength(payload),
-    },
-    timeout: aiTimeoutMs,
-  }, (res) => {
-    const chunks = [];
-
-    res.on("data", (chunk) => {
-      chunks.push(chunk);
-    });
-
-    res.on("end", () => {
-      const body = Buffer.concat(chunks).toString("utf8");
-      let data = null;
-
-      try {
-        data = body ? JSON.parse(body) : {};
-      } catch (error) {
-        reject(Object.assign(new Error("AI response JSON parse failed"), { errorType: "format" }));
-        return;
-      }
-
-      if (res.statusCode < 200 || res.statusCode >= 300) {
-        const errorMessage = JSON.stringify(data).toLowerCase();
-        const quotaError = res.statusCode === 402 || errorMessage.includes("quota") || errorMessage.includes("balance") || errorMessage.includes("insufficient");
-        reject(Object.assign(new Error("AI service http error"), { errorType: quotaError ? "quota" : "network", statusCode: res.statusCode }));
-        return;
-      }
-
-      resolve(data);
-    });
-  });
-
-  req.on("timeout", () => {
-    req.destroy(Object.assign(new Error("AI service timeout"), { errorType: "network" }));
-  });
-
-  req.on("error", (error) => {
-    reject(Object.assign(error, { errorType: error.errorType || "network" }));
-  });
-
-  req.write(payload);
-  req.end();
-});
+};
 
 const parseAiContent = (content) => {
   const text = String(content || "").trim();
@@ -399,6 +368,18 @@ const getAiErrorMessage = (errorType) => {
     return "服务配置缺失，请联系小程序管理员";
   }
 
+  if (errorType === "auth" || errorType === "permission") {
+    return "AI 服务权限不足，请联系小程序管理员";
+  }
+
+  if (errorType === "rate_limit") {
+    return "AI 服务繁忙，请稍后再试";
+  }
+
+  if (errorType === "timeout") {
+    return "AI 生成超时，请稍后再试";
+  }
+
   return "服务连接失败，请稍后重试或联系小程序管理员";
 };
 
@@ -407,7 +388,7 @@ exports.main = async (event = {}) => {
   const input = String(event.text || event.input || "").trim();
   let openid = "";
   let actor = null;
-  let model = getSafeEnv("AI_MODEL") || "hunyuan-2.0-instruct-20251111";
+  let model = getSafeEnv("AI_MODEL") || "hy3-preview";
 
   try {
     openid = cloud.getWXContext().OPENID;
@@ -460,12 +441,6 @@ exports.main = async (event = {}) => {
     }
 
     const aiConfig = getAiConfig();
-
-    if (!aiConfig) {
-      await writeUsageLog({ openid, role: actor.role, inputLength: input.length, success: false, errorType: "config", model, latencyMs: Date.now() - startAt });
-      return fail("服务配置缺失，请联系小程序管理员", "config");
-    }
-
     model = aiConfig.model;
 
     let aiRes;
@@ -482,8 +457,7 @@ exports.main = async (event = {}) => {
       return fail(getAiErrorMessage(errorType), errorType);
     }
 
-    const content = aiRes && aiRes.choices && aiRes.choices[0] && aiRes.choices[0].message && aiRes.choices[0].message.content;
-    const rawDraft = parseAiContent(content);
+    const rawDraft = parseAiContent(aiRes);
     const draft = sanitizeDraft(rawDraft);
 
     if (!draft) {

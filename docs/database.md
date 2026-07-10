@@ -220,7 +220,7 @@
 
 ## feedbacks
 
-用途：保存已认证用户提交的问题、建议和体验反馈。首版支持用户提交与超级管理员只读查看，不提供回复、删除、处理流转或导出。
+用途：保存已认证用户提交的问题、建议和体验反馈。该功能支持用户提交与超级管理员只读查看，不提供回复、删除、处理流转或导出。
 
 主要字段：
 
@@ -232,9 +232,9 @@
 | `studentId` | 提交用户学号 |
 | `role` | 提交时用户角色，支持 `user`、`admin`、`superAdmin` |
 | `content` | 反馈内容 |
-| `status` | 处理状态，首版默认 `pending` |
+| `status` | 处理状态，默认值为 `pending` |
 | `createdAt` | 反馈提交时间 |
-| `updatedAt` | 更新时间，首版与 `createdAt` 一致 |
+| `updatedAt` | 更新时间，创建记录时与 `createdAt` 一致 |
 
 示例数据：
 
@@ -270,7 +270,7 @@
 | --- | --- |
 | `_id` | 由动作、openid 和时间桶组成的确定性记录 ID |
 | `openid` | 操作用户 openid |
-| `action` | 计数动作，例如 `create_notice`、`update_notice`、`apply_admin_attempt`、`submit_feedback` |
+| `action` | 计数动作，例如 `create_notice`、`update_notice`、`apply_admin_attempt`、`submit_feedback`、`class_assistant_daily`、`class_assistant_minute` |
 | `count` | 当前时间桶内的计数值 |
 | `windowStart` | 当前固定时间桶的开始时间 |
 | `windowMs` | 时间桶长度，单位毫秒 |
@@ -320,11 +320,78 @@
   "inputLength": 32,
   "success": true,
   "errorType": "",
-  "model": "hy3-preview",
+  "model": "configured-model",
   "latencyMs": 1200,
   "createdAt": "2026-07-03T06:30:00.000Z"
 }
 ```
+
+## handbook_versions
+
+用途：记录可供班级助手检索的学生手册版本。生产环境必须且只能有一条 `active: true` 的记录；多个启用版本会被视为配置错误。
+
+| 字段 | 含义 |
+| --- | --- |
+| `version` | 手册版本唯一标识 |
+| `name` | 对用户展示的手册名称 |
+| `active` | 是否为当前启用版本 |
+| `chunkCount` | 对应切片数量 |
+| `sourceFileName` | 可选的来源文件名，不应在开源示例中使用真实文件名 |
+| `createdAt` / `updatedAt` | 创建和更新时间 |
+
+建议为 `active` 建立升序、非唯一索引，并在切换版本时先关闭旧版本，再启用新版本。不要创建唯一索引，因为多条 `active: false` 记录同样会触发唯一性冲突。
+
+## handbook_chunks
+
+用途：保存学生手册检索切片，仅供 `askClassAssistant` 云函数读取。
+
+| 字段 | 含义 |
+| --- | --- |
+| `handbookVersion` | 关联的手册版本 |
+| `section` / `title` / `article` | 章节、标题和条款信息 |
+| `pageText` | 手册页码 |
+| `content` | 切片正文 |
+| `keywords` | 检索关键词数组 |
+| `sort` | 稳定分页和排序使用的整数 |
+| `createdAt` | 创建时间 |
+
+必须建立非唯一复合索引：第一个字段 `handbookVersion` 升序，第二个字段 `sort` 升序。单版本最多加载 3000 条候选切片；超过时会返回配置错误，不会静默丢弃尾部数据。同一版本重新导入前必须先删除旧切片，避免重复记录。
+
+## class_assistant_logs
+
+用途：记录班级助手各阶段结果和耗时，不保存完整问题、完整回答或完整手册上下文。
+
+| 字段 | 含义 |
+| --- | --- |
+| `openid` / `role` | 调用用户及角色 |
+| `handbookVersion` | 本次检索使用的版本 |
+| `questionLength` | 问题字符数 |
+| `matchedChunkIds` | 命中的切片 ID |
+| `outcome` | `answered`、`supplemental_answered`、`no_match`、`ai_failed`、`security_rejected`、`security_failed`、`rate_limited`、`permission_denied`、`input_rejected` 或 `config_failed` |
+| `errorType` | 细分错误类型 |
+| `model` | AI 模型名 |
+| `latencyMs` | 端到端耗时 |
+| `stageLatencies` | 身份、安全、检索、限流和 AI 等阶段耗时 |
+| `traceId` | SDK 错误中可用的请求 ID；没有返回时为空字符串 |
+| `aiInvoked` / `aiSucceeded` | 是否实际调用 AI，以及网关是否返回可解析成功响应 |
+| `createdAt` | 创建时间 |
+
+建议为 `createdAt`、`outcome + createdAt` 和 `errorType + createdAt` 建立索引。AI 调用成功率按 `aiInvoked: true` 的记录统计 `aiSucceeded`；端到端回答成功率单独按 `outcome: answered` 统计，不得把未调用 AI 的 `no_match` 当作 AI 成功。
+
+## class_assistant_requests
+
+用途：保存短期请求状态和服务端取消信号。前端停止后，运行中的云函数会读取该记录并取消 CloudBase SDK 的文本流和数据流。
+
+| 字段 | 含义 |
+| --- | --- |
+| `_id` | 前端生成的请求 ID |
+| `openid` | 请求所有者 |
+| `cancelled` | 是否收到取消信号 |
+| `status` | `running`、`answered`、`no_match`、`cancelled` 或 `failed` |
+| `expiresAt` | 过期清理时间 |
+| `createdAt` / `updatedAt` | 创建和更新时间 |
+
+建议为 `expiresAt` 配置 TTL 或定期清理。该集合必须禁止客户端直接读写，取消操作只能经过云函数校验 openid。运行中的云函数约每秒检查一次取消状态，因此停止通常不是瞬时完成。
 
 ## operation_logs
 

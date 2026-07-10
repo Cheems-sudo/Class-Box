@@ -250,12 +250,12 @@ page {
   font-weight: 600;
 }
 
-.attachment-open-button {
+.attachment-open-button,
+.link-copy-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   margin-left: auto;
-  width: 96rpx;
   min-width: 0;
   height: 52rpx;
   padding: 0;
@@ -263,6 +263,14 @@ page {
   box-sizing: border-box;
   font-size: 22rpx;
   line-height: 1;
+}
+
+.attachment-open-button {
+  width: 96rpx;
+}
+
+.link-copy-button {
+  width: 112rpx;
 }
 
 .admin-actions {

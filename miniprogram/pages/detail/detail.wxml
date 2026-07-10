@@ -103,7 +103,7 @@
           <view class="link-title">{{item.title}}</view>
           <view class="link-url">{{item.url}}</view>
         </view>
-        <button class="link-copy-button" data-index="{{index}}" bindtap="copyLink">复制链接</button>
+        <view class="link-copy-button" data-index="{{index}}" bindtap="copyLink">复制链接</view>
       </view>
     </view>
   </view>

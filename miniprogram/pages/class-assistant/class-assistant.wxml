@@ -1,0 +1,80 @@
+<view class="page">
+  <scroll-view
+    class="message-scroll"
+    style="padding-bottom: {{scrollBottomPadding}}rpx;"
+    scroll-y
+    scroll-with-animation
+    scroll-into-view="{{scrollIntoView}}"
+    enhanced
+  >
+    <view class="state-card" wx:if="{{authLoading}}">
+      <view class="state-title">身份检查中...</view>
+      <view class="state-desc">正在确认班级成员身份</view>
+    </view>
+
+    <view class="state-card verify-card" wx:elif="{{!verified}}">
+      <view class="state-title">请先完成身份认证</view>
+      <view class="state-desc">认证后即可使用班级助手</view>
+      <button class="verify-button" bindtap="goMemberVerify" hover-class="button-pressed" hover-stay-time="80">去认证</button>
+    </view>
+
+    <block wx:else>
+      <view class="assistant-head">
+        <view class="assistant-subtitle">基于《学生手册》回答</view>
+        <view class="assistant-hint">回答不理想？可尝试输入名词全称，例如“综测 → 综合测评”。</view>
+      </view>
+
+      <view class="message-list">
+        <view
+          wx:for="{{messages}}"
+          wx:key="id"
+          id="msg-{{item.id}}"
+          class="message-row {{item.role === 'user' ? 'user' : 'assistant'}}"
+        >
+          <view class="message-bubble">
+            <view class="message-text" wx:if="{{item.content}}">{{item.content}}</view>
+            <view class="message-text loading" wx:elif="{{item.loading}}">正在查找依据...</view>
+            <view class="message-stop-status" wx:if="{{item.stopStatus}}">{{item.stopStatus}}</view>
+            <view class="citation-section" wx:if="{{item.citation}}">
+              <view class="citation-toggle" bindtap="toggleCitation" data-id="{{item.id}}">
+                <text>{{item.citationExpanded ? '收起依据' : '查看依据'}}</text>
+                <text class="citation-arrow {{item.citationExpanded ? 'expanded' : ''}}">⌄</text>
+              </view>
+              <view class="message-citation" wx:if="{{item.citationExpanded}}">{{item.citation}}</view>
+            </view>
+          </view>
+        </view>
+        <view id="message-bottom" class="message-bottom"></view>
+      </view>
+    </block>
+  </scroll-view>
+
+  <view class="input-bar" style="bottom: {{inputBarBottom}}px;" wx:if="{{verified}}">
+    <view class="input-shell">
+      <textarea
+        class="question-input"
+        value="{{question}}"
+        placeholder="输入问题"
+        placeholder-class="input-placeholder"
+        maxlength="{{maxQuestionLength}}"
+        auto-height
+        adjust-position="{{false}}"
+        cursor-spacing="16"
+        show-confirm-bar="{{false}}"
+        bindinput="onQuestionInput"
+        bindkeyboardheightchange="onKeyboardHeightChange"
+        bindblur="onQuestionBlur"
+        disabled="{{sending}}"
+      ></textarea>
+      <view
+        class="action-button {{hasQuestion ? 'ready' : ''}} {{sending ? 'stop' : ''}}"
+        bindtap="handleActionTap"
+        hover-class="button-pressed"
+        hover-stay-time="80"
+      >
+        <view class="send-icon" wx:if="{{!sending}}"></view>
+        <view class="stop-icon" wx:else></view>
+      </view>
+    </view>
+  </view>
+</view>

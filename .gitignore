@@ -18,3 +18,9 @@ cloudbaserc.json
 miniprogram/config.js
 cloudfunctions/sendNoticeMessage/config.js
 cloudfunctions/saveNoticeSubscriber/config.js
+data/*.pdf
+data/handbook-*.txt
+data/handbook_versions_*_import.json
+data/handbook_chunks_*_import.json
+!data/handbook_versions_example_import.json
+!data/handbook_chunks_example_import.json

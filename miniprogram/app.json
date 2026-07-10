@@ -9,6 +9,7 @@
     "pages/feedback-admin/feedback-admin",
     "pages/admin-auth/admin-auth",
     "pages/member-verify/member-verify",
+    "pages/class-assistant/class-assistant",
     "pages/my/my"
   ],
   "window": {

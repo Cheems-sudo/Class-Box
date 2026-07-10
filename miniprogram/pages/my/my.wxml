@@ -1,6 +1,11 @@
 <view class="page">
   <view class="profile-card">
-    <view class="profile-main" wx:if="{{verified}}">
+    <view class="profile-main" wx:if="{{authLoading}}">
+      <view class="profile-name muted">身份检查中...</view>
+      <view class="profile-student-id">正在同步你的班级身份</view>
+    </view>
+
+    <view class="profile-main" wx:elif="{{verified}}">
       <view class="profile-name">{{name}}</view>
       <view class="profile-student-id">学号：{{studentId}}</view>
     </view>
@@ -10,15 +15,15 @@
       <view class="profile-student-id">完成验证后显示姓名和学号</view>
     </view>
 
-    <view class="badge-row">
+    <view class="badge-row" wx:if="{{!authLoading}}">
       <view class="badge {{verified ? 'success' : 'warning'}}">班级身份：{{verified ? '已验证' : '未验证'}}</view>
       <view class="badge {{isAdmin ? 'admin' : ''}}">系统身份：{{roleText}}</view>
     </view>
 
-    <button class="verify-button" wx:if="{{!verified}}" bindtap="goMemberVerify">去验证</button>
+    <button class="verify-button" wx:if="{{!authLoading && !verified}}" bindtap="goMemberVerify">去验证</button>
   </view>
 
-  <view class="feature-section" wx:if="{{verified}}">
+  <view class="feature-section" wx:if="{{!authLoading && verified}}">
     <view class="section-title">常用功能</view>
     <view class="feature-grid">
       <view class="feature-item" bindtap="goFavorites">
@@ -42,6 +47,14 @@
         <view class="feature-copy">
           <view class="feature-title">订阅中</view>
           <view class="feature-desc">接收下一条通知</view>
+        </view>
+      </view>
+
+      <view class="feature-item" bindtap="goClassAssistant">
+        <view class="feature-icon red">❓</view>
+        <view class="feature-copy">
+          <view class="feature-title">班级助手</view>
+          <view class="feature-desc">查询《学生手册》</view>
         </view>
       </view>
 

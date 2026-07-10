@@ -5,6 +5,7 @@ Page({
   data: {
     isAdmin: false,
     role: "user",
+    authLoading: true,
     roleText: "普通用户",
     verified: false,
     name: "",
@@ -18,6 +19,10 @@ Page({
     this.checkAdminPermission();
   },
   checkAdminPermission() {
+    this.setData({
+      authLoading: true,
+    });
+
     return wx.cloud
       .callFunction({
         name: "checkAdmin",
@@ -30,6 +35,7 @@ Page({
         }
 
         this.setData({
+          authLoading: false,
           isAdmin: result.isAdmin === true,
           role: result.role || "user",
           roleText: this.getRoleText(result.role),
@@ -40,6 +46,7 @@ Page({
       })
       .catch((error) => {
         this.setData({
+          authLoading: false,
           isAdmin: false,
           role: "user",
           roleText: "普通用户",
@@ -87,6 +94,19 @@ Page({
 
     wx.navigateTo({
       url: "/pages/my-posts/my-posts",
+    });
+  },
+  goClassAssistant() {
+    if (this.data.verified !== true) {
+      wx.showToast({
+        title: "请先完成班级身份验证",
+        icon: "none",
+      });
+      return;
+    }
+
+    wx.navigateTo({
+      url: "/pages/class-assistant/class-assistant",
     });
   },
   goFeedback() {

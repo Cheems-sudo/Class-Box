@@ -1,10 +1,10 @@
 {
-  "name": "parseNoticeWithAI",
+  "name": "askClassAssistant",
   "version": "1.0.0",
-  "description": "Parses natural language notice input into a sanitized AI draft",
+  "description": "Answers student handbook questions with cited class assistant responses",
   "main": "index.js",
   "scripts": {
-    "test": "node --check index.js"
+    "test": "node --check index.js && node --test test/*.test.js"
   },
   "author": "",
   "license": "MIT",
