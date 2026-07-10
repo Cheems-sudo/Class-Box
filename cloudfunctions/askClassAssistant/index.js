@@ -211,6 +211,24 @@ const writeUsageLog = async ({ openid, role, handbookVersion, questionLength, ma
   }
 };
 
+const writeUnansweredQuestion = async ({ question, handbookVersion, source }) => {
+  const now = new Date();
+
+  try {
+    await db.collection("class_assistant_gaps").add({
+      data: {
+        question: String(question || "").trim(),
+        handbookVersion: String(handbookVersion || ""),
+        source: String(source || ""),
+        createdAt: now,
+        expiresAt: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
+      },
+    });
+  } catch (error) {
+    logSafeError("askClassAssistant unanswered question write failed", error, { stage: "gap_log" });
+  }
+};
+
 const getActiveHandbookVersion = async () => {
   const result = await db.collection("handbook_versions")
     .where({ active: true })
@@ -753,6 +771,11 @@ exports.main = async (event = {}) => {
 
     if (!matchedChunks.length) {
       requestStatus = "no_match";
+      await writeUnansweredQuestion({
+        question,
+        handbookVersion,
+        source: "retrieval_no_match",
+      });
       await usage({ outcome: "no_match", errorType: "" });
       return {
         success: true,
@@ -811,6 +834,11 @@ exports.main = async (event = {}) => {
 
     if (parsedAnswer.body === noMatchAnswer) {
       requestStatus = "no_match";
+      await writeUnansweredQuestion({
+        question,
+        handbookVersion,
+        source: "model_no_match",
+      });
       await usage({ outcome: "no_match", errorType: "" });
       return {
         success: true,

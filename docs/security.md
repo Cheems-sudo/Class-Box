@@ -81,6 +81,7 @@ AI 快速发布和班级助手均通过云环境的 CloudBase Node SDK 调用。
 - `handbook_chunks`：包含手册切片正文。
 - `class_assistant_logs`：包含问答结果、错误类型、命中切片和阶段耗时。
 - `class_assistant_requests`：包含请求所有者和短期取消状态。
+- `class_assistant_gaps`：包含学生手册未能回答的问题原文，不包含用户身份。
 - `operation_logs`：包含关键操作日志。
 
 建议做法：
@@ -91,9 +92,9 @@ AI 快速发布和班级助手均通过云环境的 CloudBase Node SDK 调用。
 - `security_counters` 只由云函数维护。
 - `ai_usage_logs` 只由 `parseNoticeWithAI` 写入，普通用户不可直接读取或写入。
 - `handbook_versions` 和 `handbook_chunks` 只允许 `askClassAssistant` 读取，普通用户不可直接读写。
-- `class_assistant_logs` 和 `class_assistant_requests` 只由 `askClassAssistant` 维护；取消请求必须校验记录所属 openid。
+- `class_assistant_logs`、`class_assistant_requests` 和 `class_assistant_gaps` 只由 `askClassAssistant` 维护；取消请求必须校验记录所属 openid。
 - `operation_logs` 只由云函数写入，普通用户不可直接读取。
-- 根据运营需要定期清理过期的 `security_counters`、`class_assistant_requests` 和历史日志。
+- 根据运营需要定期手动清理过期的 `security_counters`、`class_assistant_requests`、`class_assistant_gaps` 和历史日志。
 
 ## 邀请码安全
 
@@ -123,7 +124,7 @@ AI 快速发布和班级助手均通过云环境的 CloudBase Node SDK 调用。
 - 班级助手的完整问题、完整回答和完整手册上下文。
 - AI API Key 或带凭据的请求头。
 
-班级助手错误日志只应记录 SDK 错误码、错误类型、可用的请求 ID、请求阶段、耗时、模型和调用渠道，不记录 SDK 原始响应正文。`class_assistant_logs` 可以记录问题长度和命中切片 ID，但不能保存问题原文。
+班级助手错误日志只应记录 SDK 错误码、错误类型、可用的请求 ID、请求阶段、耗时、模型和调用渠道，不记录 SDK 原始响应正文。`class_assistant_logs` 可以记录问题长度和命中切片 ID，但不能保存问题原文。只有返回“学生手册中未找到明确规定”的问题会写入 `class_assistant_gaps`，不关联 openid；管理员按 `expiresAt` 手动清理超过30天的记录。
 
 ## 内容安全
 

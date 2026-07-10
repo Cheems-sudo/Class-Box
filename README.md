@@ -112,6 +112,7 @@ AI 快速发布和班级助手均通过 `@cloudbase/node-sdk` 调用云环境中
 - `handbook_chunks`
 - `class_assistant_logs`
 - `class_assistant_requests`
+- `class_assistant_gaps`
 
 数据库字段说明见 [docs/database.md](docs/database.md)，权限建议见 [docs/database-permissions.md](docs/database-permissions.md)。
 

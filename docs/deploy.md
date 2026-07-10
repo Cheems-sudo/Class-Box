@@ -90,6 +90,7 @@
 - `handbook_chunks`
 - `class_assistant_logs`
 - `class_assistant_requests`
+- `class_assistant_gaps`
 
 `feedbacks` 用于保存用户提交的意见反馈，建议只允许通过 `submitFeedback` 云函数写入，并通过 `listFeedbacks` 云函数供超级管理员只读查看。
 
@@ -97,11 +98,11 @@
 
 `ai_usage_logs` 用于记录 AI 辅助发布的调用情况，不保存用户输入原文或 AI 返回完整正文。
 
-`handbook_versions` 用于保存学生手册版本信息，`handbook_chunks` 用于保存学生手册切片内容，`class_assistant_logs` 用于记录班级助手调用情况，`class_assistant_requests` 用于传递短期请求状态和后端取消信号。
+`handbook_versions` 用于保存学生手册版本信息，`handbook_chunks` 用于保存学生手册切片内容，`class_assistant_logs` 用于记录班级助手调用情况，`class_assistant_requests` 用于传递短期请求状态和后端取消信号，`class_assistant_gaps` 用于保存未找到明确规定的问题。
 
 `operation_logs` 用于身份认证、管理员授权、事项发布、编辑、删除等关键操作日志。
 
-建议定期删除 `security_counters.expiresAt`、`class_assistant_requests.expiresAt` 已过期的记录，并根据运营需要为日志设置保留周期。
+建议定期在数据库控制台按 `expiresAt` 筛选并手动删除 `security_counters`、`class_assistant_requests` 和 `class_assistant_gaps` 中的过期记录，并根据运营需要为日志设置保留周期。
 
 建议为高频查询字段创建索引，例如：
 
@@ -127,7 +128,10 @@
 - `class_assistant_logs.openid`
 - `class_assistant_logs.createdAt`
 - `class_assistant_logs.outcome + class_assistant_logs.createdAt`（复合索引）
-- `class_assistant_requests.expiresAt`（用于 TTL 或定期清理）
+- `class_assistant_requests.expiresAt`（用于筛选过期记录）
+- `class_assistant_gaps.expiresAt`（用于筛选超过30天的记录）
+- `class_assistant_gaps.createdAt`
+- `class_assistant_gaps.source + class_assistant_gaps.createdAt`（复合索引）
 
 ## 4. 数据库权限
 
@@ -138,7 +142,7 @@
 - 普通用户不应直接读写 `feedbacks`，反馈提交应通过 `submitFeedback` 云函数，超级管理员查看应通过 `listFeedbacks` 云函数。
 - 普通用户不应直接写入 `security_counters`。
 - 普通用户不应直接读写 `ai_usage_logs`。
-- 普通用户不应直接读写 `handbook_versions`、`handbook_chunks`、`class_assistant_logs` 和 `class_assistant_requests`，班级助手问答与停止请求都应通过 `askClassAssistant` 云函数完成。
+- 普通用户不应直接读写 `handbook_versions`、`handbook_chunks`、`class_assistant_logs`、`class_assistant_requests` 和 `class_assistant_gaps`，班级助手问答与停止请求都应通过 `askClassAssistant` 云函数完成。
 - 普通用户不应直接写入 `operation_logs`。
 - 管理员授权、发布、编辑、删除等敏感操作应通过云函数完成权限校验。
 - `class_members`、`admin_invite_codes` 等敏感集合不要开放普通用户直接读写。
@@ -223,7 +227,7 @@
 
 1. 创建集合 `handbook_versions`，导入你的手册版本记录。
 2. 创建集合 `handbook_chunks`，导入同一版本对应的手册切片记录。
-3. 创建 `class_assistant_logs` 和 `class_assistant_requests`，并关闭四个班级助手集合的客户端读写权限。
+3. 创建 `class_assistant_logs`、`class_assistant_requests` 和 `class_assistant_gaps`，并关闭五个班级助手集合的客户端读写权限。
 4. 按第 3 节要求创建 `handbookVersion + sort` 非唯一复合索引。
 5. 确认 `handbook_versions` 中只有需要生效的版本为 `active: true`。
 6. 确认 `handbook_chunks` 中 `handbookVersion` 与启用版本的 `version` 一致，且每条切片都有数值型 `sort`。
@@ -274,7 +278,8 @@
 - 如启用班级助手，`askClassAssistant` 已使用“云端安装依赖”部署，`@cloudbase/node-sdk`、`ws`、`security.msgSecCheck` 权限和 60 秒超时配置均已生效。
 - 如启用任一 AI 功能，云环境已启用受 CloudBase Node SDK 支持的模型服务，云函数通过环境身份调用模型。
 - 如启用班级助手，`handbook_versions` 和 `handbook_chunks` 数据已导入，只有一条 `active: true` 的手册版本，并已创建 `handbookVersion + sort` 非唯一复合索引。
-- 如启用班级助手，`class_assistant_requests` 已创建、客户端权限已关闭，并配置过期清理策略。
+- 如启用班级助手，`class_assistant_requests` 已创建、客户端权限已关闭，并已制定手动清理过期记录的安排。
+- 如启用班级助手，`class_assistant_gaps` 已创建、客户端权限已关闭，并按 `expiresAt` 手动清理超过30天的记录。
 - 如启用班级助手，公网 HTTP 路由已关闭或启用了经过验证的身份认证。
 - 班级成员数据已导入。
 - 管理员/超级管理员邀请码已创建。

@@ -6,7 +6,6 @@ const dataDir = path.join(rootDir, "data");
 const sourcePath = path.join(dataDir, "handbook-2025.txt");
 const chunksImportPath = path.join(dataDir, "handbook_chunks_2025_import.json");
 const versionImportPath = path.join(dataDir, "handbook_versions_2025_import.json");
-const reportPath = path.join(dataDir, "handbook_chunks_2025_report.txt");
 
 const handbookVersion = "2025";
 const handbookName = "2025年学生手册";
@@ -289,16 +288,6 @@ const main = () => {
 
   fs.writeFileSync(chunksImportPath, `${chunks.map((chunk) => JSON.stringify(chunk)).join("\n")}\n`, "utf8");
   fs.writeFileSync(versionImportPath, `${version.map((item) => JSON.stringify(item)).join("\n")}\n`, "utf8");
-  fs.writeFileSync(reportPath, [
-    `chunkCount=${chunks.length}`,
-    `pageCount=${pages.length}`,
-    `first=${chunks[0] ? chunks[0].title : ""}`,
-    `last=${chunks[chunks.length - 1] ? chunks[chunks.length - 1].title : ""}`,
-    "integrity=passed",
-    "",
-    "sample:",
-    ...chunks.slice(0, 5).map((chunk) => `${chunk.pageText} ${chunk.title} ${chunk.article} ${chunk.content.slice(0, 80).replace(/\n/g, " ")}`),
-  ].join("\n"), "utf8");
 };
 
 main();

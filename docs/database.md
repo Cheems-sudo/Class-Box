@@ -378,6 +378,20 @@
 
 建议为 `createdAt`、`outcome + createdAt` 和 `errorType + createdAt` 建立索引。AI 调用成功率按 `aiInvoked: true` 的记录统计 `aiSucceeded`；端到端回答成功率单独按 `outcome: answered` 统计，不得把未调用 AI 的 `no_match` 当作 AI 成功。
 
+## class_assistant_gaps
+
+用途：保存学生手册未能回答的问题，便于补充别名、手册数据或固定回答。每次无匹配均单独记录，不去重、不归类，也不保存 openid。
+
+| 字段 | 含义 |
+| --- | --- |
+| `question` | 通过内容安全检测的问题原文 |
+| `handbookVersion` | 产生无匹配结果时使用的手册版本 |
+| `source` | `retrieval_no_match` 表示检索无候选，`model_no_match` 表示模型判断现有片段不足以回答 |
+| `createdAt` | 创建时间 |
+| `expiresAt` | 创建时间后30天，用于过期清理 |
+
+建议为 `createdAt`、`source + createdAt` 和 `expiresAt` 建立查询索引。管理员可在数据库控制台按 `expiresAt` 筛选并手动删除超过30天的记录。该集合必须禁止客户端直接读写。
+
 ## class_assistant_requests
 
 用途：保存短期请求状态和服务端取消信号。前端停止后，运行中的云函数会读取该记录并取消 CloudBase SDK 的文本流和数据流。
@@ -391,7 +405,7 @@
 | `expiresAt` | 过期清理时间 |
 | `createdAt` / `updatedAt` | 创建和更新时间 |
 
-建议为 `expiresAt` 配置 TTL 或定期清理。该集合必须禁止客户端直接读写，取消操作只能经过云函数校验 openid。运行中的云函数约每秒检查一次取消状态，因此停止通常不是瞬时完成。
+建议为 `expiresAt` 建立查询索引，并定期在数据库控制台手动删除过期记录。该集合必须禁止客户端直接读写，取消操作只能经过云函数校验 openid。运行中的云函数约每秒检查一次取消状态，因此停止通常不是瞬时完成。
 
 ## operation_logs
 
