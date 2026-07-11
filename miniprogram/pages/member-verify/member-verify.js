@@ -1,3 +1,4 @@
+// 页面逻辑：管理 member-verify 页面的状态、用户交互与数据请求。
 Page({
   data: {
     name: "",
@@ -17,6 +18,7 @@ Page({
       errorMessage: "",
     });
   },
+  // 提交前完成校验并锁定重复操作，统一处理成功回写和失败恢复。
   submitVerify() {
     if (this.data.submitting) {
       return;

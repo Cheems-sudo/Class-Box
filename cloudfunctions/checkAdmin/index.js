@@ -1,3 +1,4 @@
+// 云函数说明：封装 index 相关的服务端校验与数据处理流程。
 const cloud = require("wx-server-sdk");
 
 cloud.init({
@@ -16,6 +17,7 @@ const normalizeRole = (role) => {
   return "user";
 };
 
+// 集中编排参数校验、权限控制、数据操作和异常响应。
 exports.main = async () => {
   try {
     const wxContext = cloud.getWXContext();

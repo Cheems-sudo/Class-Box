@@ -1,3 +1,4 @@
+// 页面逻辑：管理 my-posts 页面的状态、用户交互与数据请求。
 const pageSize = 20;
 
 Page({
@@ -21,6 +22,7 @@ Page({
       stopRefresh: true,
     });
   },
+  // 在后续处理前验证输入和业务约束，失败时立即终止无效流程。
   checkPermission(options = {}) {
     this.setData({
       authLoading: true,
@@ -82,6 +84,7 @@ Page({
       return null;
     });
   },
+  // 读取并整理 loadMyPosts 所需的数据，异步完成后再同步业务状态。
   loadMyPosts(options = {}) {
     this.setData({
       isLoading: true,
@@ -171,9 +174,11 @@ Page({
       url: `/pages/detail/detail?id=${noticeId}`,
     });
   },
+  // 兼容不同来源和历史版本的数据，并统一为当前模块使用的稳定结构。
   normalizeCategory(category) {
     return category === "比赛活动" ? "活动信息" : category;
   },
+  // 兼容不同来源和历史版本的数据，并统一为当前模块使用的稳定结构。
   normalizeTimeLabel(timeLabel) {
     return timeLabel === "事项时间" ? "相关时间" : timeLabel;
   },

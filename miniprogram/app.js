@@ -1,3 +1,4 @@
+// 页面逻辑：管理 app 页面的状态、用户交互与数据请求。
 // app.js
 const config = require("./config.js");
 

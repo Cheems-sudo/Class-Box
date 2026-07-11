@@ -1,3 +1,4 @@
+// 云函数说明：封装 ai-utils 相关的服务端校验与数据处理流程。
 const transientNetworkCodes = new Set([
   "ECONNRESET",
   "ECONNREFUSED",

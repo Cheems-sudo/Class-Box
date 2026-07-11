@@ -1,3 +1,4 @@
+// 测试说明：验证 ai-utils.test 模块的关键行为与边界条件。
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const {

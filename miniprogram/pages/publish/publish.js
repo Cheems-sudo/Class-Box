@@ -1,3 +1,4 @@
+// 页面逻辑：管理 publish 页面的状态、用户交互与数据请求。
 const initialForm = {
   title: "",
   category: "考试安排",
@@ -180,6 +181,7 @@ Page({
     this.consumePendingEditNotice();
     this.checkPublishPermission({ silent: this.hasCheckedPublishPermission === true });
   },
+  // 在后续处理前验证输入和业务约束，失败时立即终止无效流程。
   checkPublishPermission(options = {}) {
     if (this.permissionChecking) {
       return this.permissionChecking;
@@ -301,6 +303,7 @@ Page({
       });
     }
   },
+  // 从全局缓存中取出详情页传来的待编辑公告；消费后立即清空，防止下次发布误入编辑模式。
   consumePendingEditNotice() {
     if (this.data.isEdit) {
       return;
@@ -416,9 +419,11 @@ Page({
   getLocationPlaceholder(category) {
     return locationPlaceholderMap[this.normalizeCategory(category)] || "请输入地点或说明";
   },
+  // 兼容不同来源和历史版本的数据，并统一为当前模块使用的稳定结构。
   normalizeCategory(category) {
     return category === "比赛活动" ? "活动信息" : category;
   },
+  // 兼容不同来源和历史版本的数据，并统一为当前模块使用的稳定结构。
   normalizeTimeLabel(timeLabel) {
     return timeLabel === "事项时间" ? "相关时间" : timeLabel;
   },
@@ -446,6 +451,7 @@ Page({
       showTimeLabelPicker: timeLabelOptions.length > 1,
     };
   },
+  // 兼容不同来源和历史版本的数据，并统一为当前模块使用的稳定结构。
   normalizeImages(images) {
     if (!Array.isArray(images)) {
       return [];
@@ -461,6 +467,7 @@ Page({
         uploadedAt: this.normalizeUploadedAt(image.uploadedAt) || new Date(),
       }));
   },
+  // 兼容不同来源和历史版本的数据，并统一为当前模块使用的稳定结构。
   normalizeAttachments(attachments) {
     if (!Array.isArray(attachments)) {
       return [];
@@ -483,6 +490,7 @@ Page({
         };
       });
   },
+  // 兼容不同来源和历史版本的数据，并统一为当前模块使用的稳定结构。
   normalizeLinks(links) {
     if (!Array.isArray(links)) {
       return [];
@@ -496,6 +504,7 @@ Page({
         url: String(link.url || ""),
       }));
   },
+  // 读取并整理 loadExistingImageTempFileURLs 所需的数据，异步完成后再同步业务状态。
   loadExistingImageTempFileURLs() {
     const images = this.data.existingImages || [];
     const fileList = images
@@ -527,6 +536,7 @@ Page({
       });
     }).catch(() => {});
   },
+  // 兼容不同来源和历史版本的数据，并统一为当前模块使用的稳定结构。
   normalizeUploadedAt(value) {
     if (!value) {
       return null;
@@ -1045,6 +1055,7 @@ Page({
       newAttachments,
     });
   },
+  // 仅上传本次新增文件，并返回持久化所需的云文件标识和元数据。
   uploadNewImages() {
     const images = this.data.newImages;
 
@@ -1091,6 +1102,7 @@ Page({
 
     return ["jpg", "jpeg", "png", "gif", "webp"].includes(ext) ? ext : "jpg";
   },
+  // 仅上传本次新增文件，并返回持久化所需的云文件标识和元数据。
   uploadNewAttachments() {
     const attachments = this.data.newAttachments;
 
@@ -1175,6 +1187,7 @@ Page({
       },
     });
   },
+  // 在后续处理前验证输入和业务约束，失败时立即终止无效流程。
   validateForm(form) {
     const title = form.title.trim();
     const content = form.content.trim();
@@ -1219,6 +1232,7 @@ Page({
 
     return this.validateContent(content);
   },
+  // 在后续处理前验证输入和业务约束，失败时立即终止无效流程。
   validateContent(content) {
     if (!content) {
       this.showError("请填写详细内容");
@@ -1266,6 +1280,7 @@ Page({
   isValidLink(url) {
     return /^https?:\/\/[^\s]+$/i.test(String(url || "").trim());
   },
+  // 在后续处理前验证输入和业务约束，失败时立即终止无效流程。
   validateNoticePayload(noticeData) {
     const images = noticeData.images;
     const attachments = noticeData.attachments;
@@ -1299,6 +1314,7 @@ Page({
   buildDateTime(date, time) {
     return time ? `${date} ${time}` : date;
   },
+  // 提交前完成校验并锁定重复操作，统一处理成功回写和失败恢复。
   submitForm() {
     if (this.data.submitting) {
       return;
@@ -1433,6 +1449,7 @@ Page({
       }
     }
   },
+  // 在后续处理前验证输入和业务约束，失败时立即终止无效流程。
   validateAiDraft(draft) {
     const title = String(draft.title || "").trim();
     const content = String(draft.content || "").trim();

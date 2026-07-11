@@ -1,3 +1,4 @@
+// 页面逻辑：管理 admin-auth 页面的状态、用户交互与数据请求。
 Page({
   data: {
     form: {
@@ -14,6 +15,7 @@ Page({
   onShow() {
     this.checkMemberVerification();
   },
+  // 在后续处理前验证输入和业务约束，失败时立即终止无效流程。
   checkMemberVerification() {
     this.setData({
       authLoading: true,
@@ -59,6 +61,7 @@ Page({
       url: "/pages/member-verify/member-verify",
     });
   },
+  // 提交前完成校验并锁定重复操作，统一处理成功回写和失败恢复。
   submitAuth() {
     if (this.data.submitting) {
       return;

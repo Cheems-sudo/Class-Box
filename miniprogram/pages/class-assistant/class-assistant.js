@@ -1,3 +1,4 @@
+// 页面逻辑：管理 class-assistant 页面的状态、用户交互与数据请求。
 const maxQuestionLength = 300;
 const fallbackTypingInterval = 40;
 const typingCharsPerTick = 4;
@@ -39,6 +40,7 @@ Page({
       this.cancelCloudRequest(this.activeRequestId, this.pendingAssistantId, false);
     }
   },
+  // 在后续处理前验证输入和业务约束，失败时立即终止无效流程。
   checkMemberVerification() {
     const checkId = this.createRequestId("auth");
     this.authCheckId = checkId;
@@ -174,6 +176,7 @@ Page({
 
     this.requestCloudFunction(question, assistantMessage.id, requestId);
   },
+  // 封装远端请求生命周期，统一处理超时、取消和服务端错误。
   requestCloudFunction(question, messageId, requestId) {
     wx.cloud.callFunction({
       name: "askClassAssistant",
@@ -241,6 +244,7 @@ Page({
     this.finishAnswer(requestId);
     this.cancelCloudRequest(requestId, messageId, true);
   },
+  // 用请求标识维护异步任务状态，避免旧任务影响当前操作。
   cancelCloudRequest(requestId, messageId, updateMessage) {
     wx.cloud.callFunction({
       name: "askClassAssistant",
@@ -364,6 +368,7 @@ Page({
       ...extra,
     };
   },
+  // 兼容不同来源和历史版本的数据，并统一为当前模块使用的稳定结构。
   normalizeAnswer(answer) {
     const text = String(answer || "").trim();
     return this.splitAnswerText(text || "学生手册中未找到明确规定。");

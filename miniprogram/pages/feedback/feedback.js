@@ -1,3 +1,4 @@
+// 页面逻辑：管理 feedback 页面的状态、用户交互与数据请求。
 const maxLength = 300;
 const minLength = 2;
 
@@ -18,6 +19,7 @@ Page({
     });
   },
 
+  // 提交前完成校验并锁定重复操作，统一处理成功回写和失败恢复。
   submitFeedback() {
     if (this.data.submitting) {
       return;

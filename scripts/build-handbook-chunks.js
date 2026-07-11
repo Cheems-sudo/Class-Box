@@ -1,3 +1,4 @@
+// 脚本说明：执行 build-handbook-chunks 所需的数据转换与文件生成流程。
 const fs = require("fs");
 const path = require("path");
 

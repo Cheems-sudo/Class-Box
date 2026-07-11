@@ -1,3 +1,4 @@
+<!-- 页面结构：组织 my-posts 页面的内容区域与交互控件。 -->
 <view class="page">
   <view class="header">
     <view class="title">我发布的事项</view>

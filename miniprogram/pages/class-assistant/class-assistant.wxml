@@ -1,3 +1,4 @@
+<!-- 页面结构：组织 class-assistant 页面的内容区域与交互控件。 -->
 <view class="page">
   <scroll-view
     class="message-scroll"

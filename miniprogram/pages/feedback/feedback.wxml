@@ -1,3 +1,4 @@
+<!-- 页面结构：组织 feedback 页面的内容区域与交互控件。 -->
 <view class="page">
   <view class="header">
     <view class="title">意见反馈</view>

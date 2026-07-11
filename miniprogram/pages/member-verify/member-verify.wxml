@@ -1,3 +1,4 @@
+<!-- 页面结构：组织 member-verify 页面的内容区域与交互控件。 -->
 <view class="page">
   <view class="verify-card">
     <view class="title">班级身份验证</view>

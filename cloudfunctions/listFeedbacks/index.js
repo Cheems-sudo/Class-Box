@@ -1,3 +1,4 @@
+// 云函数说明：封装 index 相关的服务端校验与数据处理流程。
 const cloud = require("wx-server-sdk");
 
 cloud.init({
@@ -65,6 +66,7 @@ const parseCursor = (value) => {
   };
 };
 
+// 集中编排参数校验、权限控制、数据操作和异常响应。
 exports.main = async (event = {}) => {
   try {
     const openid = cloud.getWXContext().OPENID;

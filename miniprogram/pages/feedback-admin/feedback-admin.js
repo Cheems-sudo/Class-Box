@@ -1,3 +1,4 @@
+// 页面逻辑：管理 feedback-admin 页面的状态、用户交互与数据请求。
 const pageSize = 50;
 
 Page({
@@ -28,6 +29,7 @@ Page({
     this.loadFeedbacks();
   },
 
+  // 读取并整理 loadFeedbacks 所需的数据，异步完成后再同步业务状态。
   loadFeedbacks(options = {}) {
     const reset = options.reset === true;
     const cursor = reset ? null : this.data.nextCursor;
@@ -87,6 +89,7 @@ Page({
     this.loadFeedbacks({ reset: true });
   },
 
+  // 兼容不同来源和历史版本的数据，并统一为当前模块使用的稳定结构。
   normalizeFeedbacks(list) {
     if (!Array.isArray(list)) {
       return [];

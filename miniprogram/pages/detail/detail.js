@@ -1,3 +1,4 @@
+// 页面逻辑：管理 detail 页面的状态、用户交互与数据请求。
 const supportedAttachmentTypes = ["pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx"];
 const editNoticeStorageKey = "pendingEditNotice";
 
@@ -33,6 +34,7 @@ Page({
     });
     this.checkAdminPermission();
   },
+  // 兼容不同来源和历史版本的数据，并统一为当前模块使用的稳定结构。
   normalizeDetail(detail) {
     detail.isPinned = detail.isPinned === true || detail.pinned === true;
     detail.pinned = detail.isPinned;
@@ -53,6 +55,7 @@ Page({
 
     return detail;
   },
+  // 读取并整理 loadNoticeDetail 所需的数据，异步完成后再同步业务状态。
   loadNoticeDetail(noticeId) {
     if (!noticeId) {
       return;
@@ -87,6 +90,7 @@ Page({
         });
       });
   },
+  // 在后续处理前验证输入和业务约束，失败时立即终止无效流程。
   checkAdminPermission() {
     wx.cloud
       .callFunction({
@@ -163,6 +167,7 @@ Page({
       query: noticeId ? `id=${noticeId}` : "",
     };
   },
+  // 读取并整理 loadFavoriteStatus 所需的数据，异步完成后再同步业务状态。
   loadFavoriteStatus() {
     const detail = this.data.detail;
 
@@ -427,6 +432,7 @@ Page({
         });
       });
   },
+  // 兼容不同来源和历史版本的数据，并统一为当前模块使用的稳定结构。
   normalizeImages(images) {
     if (!Array.isArray(images)) {
       return [];
@@ -442,6 +448,7 @@ Page({
         uploadedAt: image.uploadedAt || "",
       }));
   },
+  // 兼容不同来源和历史版本的数据，并统一为当前模块使用的稳定结构。
   normalizeAttachments(attachments) {
     if (!Array.isArray(attachments)) {
       return [];
@@ -464,6 +471,7 @@ Page({
         };
       });
   },
+  // 兼容不同来源和历史版本的数据，并统一为当前模块使用的稳定结构。
   normalizeLinks(links) {
     if (!Array.isArray(links)) {
       return [];
@@ -477,6 +485,7 @@ Page({
       }))
       .filter((link) => link.url);
   },
+  // 读取并整理 loadImageTempFileURLs 所需的数据，异步完成后再同步业务状态。
   loadImageTempFileURLs() {
     const detail = this.data.detail;
     const images = detail && detail.images ? detail.images : [];
@@ -703,9 +712,11 @@ Page({
 
     return timeLabelMap[normalizedCategory] || "时间";
   },
+  // 兼容不同来源和历史版本的数据，并统一为当前模块使用的稳定结构。
   normalizeCategory(category) {
     return category === "比赛活动" ? "活动信息" : category;
   },
+  // 兼容不同来源和历史版本的数据，并统一为当前模块使用的稳定结构。
   normalizeTimeLabel(timeLabel) {
     return timeLabel === "事项时间" ? "相关时间" : timeLabel;
   },

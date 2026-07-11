@@ -1,3 +1,4 @@
+// 云函数说明：封装 index 相关的服务端校验与数据处理流程。
 const cloud = require("wx-server-sdk");
 
 cloud.init({
@@ -20,6 +21,7 @@ const logSafeError = (action, error) => {
   });
 };
 
+// 记录审计或辅助数据；记录失败不应掩盖主业务结果。
 const writeOperationLog = async (openid, role) => {
   try {
     await db.collection("operation_logs").add({
@@ -41,6 +43,7 @@ const writeOperationLog = async (openid, role) => {
   }
 };
 
+// 集中编排参数校验、权限控制、数据操作和异常响应。
 exports.main = async (event = {}) => {
   try {
     const openid = cloud.getWXContext().OPENID;

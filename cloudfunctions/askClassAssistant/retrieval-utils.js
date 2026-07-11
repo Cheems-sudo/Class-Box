@@ -1,3 +1,4 @@
+// 云函数说明：封装 retrieval-utils 相关的服务端校验与数据处理流程。
 const tokenize = (text) => {
   const source = String(text || "").toLowerCase();
   const tokens = source.match(/[\u4e00-\u9fa5]{2,}|[a-z0-9]{2,}/g) || [];

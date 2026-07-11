@@ -1,3 +1,4 @@
+// 页面逻辑：管理 my 页面的状态、用户交互与数据请求。
 const config = require("../../config.js");
 const noticeTemplateId = config.subscribeTemplateId;
 
@@ -15,9 +16,11 @@ Page({
   onShow() {
     this.loadUserInfo();
   },
+  // 读取并整理 loadUserInfo 所需的数据，异步完成后再同步业务状态。
   loadUserInfo() {
     this.checkAdminPermission();
   },
+  // 在后续处理前验证输入和业务约束，失败时立即终止无效流程。
   checkAdminPermission() {
     this.setData({
       authLoading: true,

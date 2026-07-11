@@ -1,3 +1,4 @@
+// 云函数说明：封装 index 相关的服务端校验与数据处理流程。
 const cloud = require("wx-server-sdk");
 const tcb = require("@cloudbase/node-sdk");
 const {
@@ -91,6 +92,7 @@ const readCounter = async (transaction, counter) => {
   }
 };
 
+// 记录审计或辅助数据；记录失败不应掩盖主业务结果。
 const writeCounter = async (transaction, counter, openid, current) => {
   const now = new Date();
   const data = {
@@ -116,6 +118,7 @@ const writeCounter = async (transaction, counter, openid, current) => {
   });
 };
 
+// 在事务中消费操作配额，防止并发请求绕过频率限制。
 const consumeRateLimit = async (openid, role) => {
   const dailyLimit = normalizeRole(role) === "superAdmin" ? 50 : 20;
   const dailyCounter = buildCounter(openid, "class_assistant_daily", getShanghaiDateKey(), 24 * 60 * 60 * 1000);
@@ -155,6 +158,7 @@ const buildSecurityError = (message, errorType) => {
   return error;
 };
 
+// 在后续处理前验证输入和业务约束，失败时立即终止无效流程。
 const checkText = async (content, openid) => {
   const text = String(content || "").trim();
 
@@ -182,6 +186,7 @@ const checkText = async (content, openid) => {
   }
 };
 
+// 记录审计或辅助数据；记录失败不应掩盖主业务结果。
 const writeUsageLog = async ({ openid, role, handbookVersion, questionLength, matchedChunkIds, outcome, errorType, model, latencyMs, stageLatencies, traceId, aiInvoked, aiSucceeded }) => {
   if (!openid) {
     return;
@@ -211,6 +216,7 @@ const writeUsageLog = async ({ openid, role, handbookVersion, questionLength, ma
   }
 };
 
+// 记录审计或辅助数据；记录失败不应掩盖主业务结果。
 const writeUnansweredQuestion = async ({ question, handbookVersion, source }) => {
   const now = new Date();
 
@@ -245,6 +251,7 @@ const getActiveHandbookVersion = async () => {
   return versions[0] || null;
 };
 
+// 读取并整理 fetchHandbookChunks 所需的数据，异步完成后再同步业务状态。
 const fetchHandbookChunks = async (handbookVersion) => {
   if (handbookChunkCache
     && handbookChunkCache.handbookVersion === handbookVersion
@@ -308,6 +315,7 @@ const readRequestState = async (requestId) => {
   }
 };
 
+// 用请求标识维护异步任务状态，避免旧任务影响当前操作。
 const registerRequest = async (requestId, openid) => {
   return db.runTransaction(async (transaction) => {
     let current = null;
@@ -339,6 +347,7 @@ const registerRequest = async (requestId, openid) => {
   });
 };
 
+// 用请求标识维护异步任务状态，避免旧任务影响当前操作。
 const cancelRequest = async (requestId, openid) => {
   return db.runTransaction(async (transaction) => {
     let current = null;
@@ -385,6 +394,7 @@ const finishRequest = async (requestId, status) => {
   }
 };
 
+// 读取并整理 searchChunks 所需的数据，异步完成后再同步业务状态。
 const searchChunks = async (question, handbookVersion) => {
   const chunks = await fetchHandbookChunks(handbookVersion);
   const rankedChunks = rankChunks(chunks, question, maxMatchedChunks);
@@ -456,6 +466,7 @@ const createAiError = (message, metadata = {}) => Object.assign(new Error(messag
 
 const wait = (delayMs) => new Promise((resolve) => setTimeout(resolve, delayMs));
 
+// 封装远端请求生命周期，统一处理超时、取消和服务端错误。
 const requestAiOnce = async (config, messages, options = {}) => {
   const startedAt = Date.now();
   let reader = null;
@@ -559,6 +570,7 @@ const requestAiOnce = async (config, messages, options = {}) => {
   }
 };
 
+// 封装远端请求生命周期，统一处理超时、取消和服务端错误。
 const requestAi = async (config, messages, options = {}) => {
   let lastError;
 
@@ -630,6 +642,7 @@ const getAiErrorMessage = (errorType) => {
   return "回答失败，请稍后再试";
 };
 
+// 集中编排参数校验、权限控制、数据操作和异常响应。
 exports.main = async (event = {}) => {
   const startAt = Date.now();
   const deadlineAt = startAt + totalTimeoutMs;

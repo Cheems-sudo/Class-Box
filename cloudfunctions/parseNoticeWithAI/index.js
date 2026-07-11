@@ -1,3 +1,4 @@
+// 云函数说明：封装 index 相关的服务端校验与数据处理流程。
 const cloud = require("wx-server-sdk");
 const tcb = require("@cloudbase/node-sdk");
 
@@ -74,6 +75,7 @@ const getChinaTime = (date) => {
   return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}:${parts.second} Asia/Shanghai`;
 };
 
+// 记录审计或辅助数据；记录失败不应掩盖主业务结果。
 const writeUsageLog = async ({ openid, role, inputLength, success, errorType, model, latencyMs }) => {
   if (!openid) {
     return;
@@ -97,6 +99,7 @@ const writeUsageLog = async ({ openid, role, inputLength, success, errorType, mo
   }
 };
 
+// 在事务中消费操作配额，防止并发请求绕过频率限制。
 const consumeRateLimit = async (openid, action, limit, windowMs) => {
   const bucketStart = Math.floor(Date.now() / windowMs) * windowMs;
   const safeOpenid = openid.replace(/[^a-zA-Z0-9_-]/g, "_");
@@ -159,6 +162,7 @@ const isRejectedResult = (result) => {
   return suggest === "risky" || suggest === "review" || getErrorCode(result) === 87014;
 };
 
+// 在后续处理前验证输入和业务约束，失败时立即终止无效流程。
 const checkText = async (content, openid) => {
   const text = String(content || "").trim();
 
@@ -229,6 +233,7 @@ const classifyAiError = (error) => {
   return "network";
 };
 
+// 封装远端请求生命周期，统一处理超时、取消和服务端错误。
 const requestAi = async (config, messages) => {
   try {
     const result = await aiModel.generateText({
@@ -383,6 +388,7 @@ const getAiErrorMessage = (errorType) => {
   return "服务连接失败，请稍后重试或联系小程序管理员";
 };
 
+// 集中编排参数校验、权限控制、数据操作和异常响应。
 exports.main = async (event = {}) => {
   const startAt = Date.now();
   const input = String(event.text || event.input || "").trim();

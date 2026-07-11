@@ -1,3 +1,4 @@
+// 云函数说明：封装 index 相关的服务端校验与数据处理流程。
 const cloud = require("wx-server-sdk");
 
 cloud.init({
@@ -34,6 +35,7 @@ const logSafeError = (action, error) => {
   });
 };
 
+// 在事务中消费操作配额，防止并发请求绕过频率限制。
 const consumeInviteAttempt = async (openid) => {
   const action = "apply_admin_attempt";
   const bucketStart =
@@ -92,6 +94,7 @@ const consumeInviteAttempt = async (openid) => {
   });
 };
 
+// 记录审计或辅助数据；记录失败不应掩盖主业务结果。
 const writeOperationLog = async (actor, data) => {
   try {
     await db.collection("operation_logs").add({
@@ -136,6 +139,7 @@ const parseExpireTime = (value) => {
   return Number.isNaN(date.getTime()) ? null : date;
 };
 
+// 集中编排参数校验、权限控制、数据操作和异常响应。
 exports.main = async (event = {}) => {
   try {
     const openid = cloud.getWXContext().OPENID;
