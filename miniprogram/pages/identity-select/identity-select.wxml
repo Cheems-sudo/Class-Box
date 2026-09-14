@@ -14,8 +14,8 @@
     </view>
 
     <view class="option-card">
-      <view class="option-title">AI 助手访客</view>
-      <view class="option-desc">无需班级成员身份，可使用学生文件 AI 助手。</view>
+      <view class="option-title">访客</view>
+      <view class="option-desc">无需班级成员身份，可使用班级助手功能。</view>
       <button class="secondary-button" bindtap="goGuestAccess" hover-class="button-pressed">访客进入</button>
     </view>
   </view>
