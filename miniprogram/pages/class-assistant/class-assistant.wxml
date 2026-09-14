@@ -13,7 +13,7 @@
       <view class="state-desc">正在确认班级成员身份</view>
     </view>
 
-    <view class="state-card verify-card" wx:elif="{{!verified}}">
+    <view class="state-card verify-card" wx:elif="{{!verified && !isGuest}}">
       <view class="state-title">请先完成身份认证</view>
       <view class="state-desc">认证后即可使用班级助手</view>
       <button class="verify-button" bindtap="goMemberVerify" hover-class="button-pressed" hover-stay-time="80">去认证</button>
@@ -21,7 +21,10 @@
 
     <block wx:else>
       <view class="assistant-head">
-        <view class="assistant-subtitle">基于《学生手册》回答</view>
+        <view class="assistant-title-row">
+          <view class="assistant-subtitle">基于《学生手册》回答</view>
+          <view class="identity-switch" wx:if="{{isGuest}}" bindtap="switchIdentity">切换身份</view>
+        </view>
         <view class="assistant-hint">回答不理想？可尝试输入名词全称，例如“综测 → 综合测评”。</view>
       </view>
 
@@ -50,7 +53,7 @@
     </block>
   </scroll-view>
 
-  <view class="input-bar" style="bottom: {{inputBarBottom}}px;" wx:if="{{verified}}">
+  <view class="input-bar" style="bottom: {{inputBarBottom}}px;" wx:if="{{verified || isGuest}}">
     <view class="input-shell">
       <textarea
         class="question-input"

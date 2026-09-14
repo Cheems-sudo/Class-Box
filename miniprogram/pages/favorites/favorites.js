@@ -1,5 +1,6 @@
 // 页面逻辑：管理 favorites 页面的状态、用户交互与数据请求。
 const favoritePageSize = 100;
+const { redirectGuestToAssistant } = require("../../utils/identity");
 
 Page({
   data: {
@@ -33,6 +34,10 @@ Page({
       if (!result.success) {
         throw new Error(result.message || "checkAdmin failed");
       }
+
+      if (redirectGuestToAssistant(result, this, () => {
+        this.setData({ favoriteNotices: [], openid: "" });
+      })) return null;
 
       const verified = result.verified === true;
 

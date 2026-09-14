@@ -8,6 +8,8 @@ Page({
   data: {
     authLoading: true,
     verified: false,
+    isGuest: false,
+    switchingIdentity: false,
     question: "",
     hasQuestion: false,
     messages: [],
@@ -64,6 +66,7 @@ Page({
       this.setData({
         authLoading: false,
         verified: result.verified === true,
+        isGuest: result.isGuest === true,
       });
     }).catch((error) => {
       if (!this.pageAlive || this.authCheckId !== checkId) {
@@ -76,6 +79,7 @@ Page({
       this.setData({
         authLoading: false,
         verified: false,
+        isGuest: false,
       });
       wx.showToast({
         title: "网络超时，请稍后重试",
@@ -116,6 +120,59 @@ Page({
 
     this.sendQuestion();
   },
+  switchIdentity() {
+    if (!this.data.isGuest || this.data.switchingIdentity) return;
+
+    if (this.data.sending) {
+      wx.showToast({ title: "请先停止当前回答", icon: "none" });
+      return;
+    }
+
+    wx.showModal({
+      title: "切换身份",
+      content: "切换身份后需要重新选择使用方式，是否继续？",
+      confirmText: "切换",
+      cancelText: "取消",
+      success: (modalResult) => {
+        if (modalResult.confirm) this.clearGuestIdentity();
+      },
+    });
+  },
+  clearGuestIdentity() {
+    if (this.data.switchingIdentity) return;
+
+    this.setData({ switchingIdentity: true });
+    wx.showLoading({ title: "切换中", mask: true });
+    wx.cloud.callFunction({ name: "clearGuestAccess" }).then((res) => {
+      const result = res.result || {};
+
+      if (!result.success) {
+        throw new Error(result.message || "切换身份失败");
+      }
+
+      if (result.alreadyMember === true && result.cleared !== true) {
+        wx.showToast({ title: "当前账号已经是班级成员", icon: "none" });
+        this.checkMemberVerification();
+        return;
+      }
+
+      wx.reLaunch({
+        url: "/pages/identity-select/identity-select",
+        fail: () => {
+          if (this.pageAlive) this.setData({ switchingIdentity: false });
+          wx.showToast({ title: "页面打开失败，请重试", icon: "none" });
+        },
+      });
+    }).catch((error) => {
+      console.error("clear guest access failed", {
+        errMsg: String(error && (error.errMsg || error.message) || ""),
+      });
+      wx.showToast({ title: "切换身份失败，请稍后重试", icon: "none" });
+    }).finally(() => {
+      wx.hideLoading();
+      if (this.pageAlive) this.setData({ switchingIdentity: false });
+    });
+  },
   toggleCitation(e) {
     const messageId = String(e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.id || "");
 
@@ -134,7 +191,7 @@ Page({
       return;
     }
 
-    if (!this.data.verified) {
+    if (!this.data.verified && !this.data.isGuest) {
       wx.showToast({
         title: "请先完成身份认证",
         icon: "none",

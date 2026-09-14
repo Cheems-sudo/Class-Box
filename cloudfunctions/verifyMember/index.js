@@ -7,6 +7,7 @@ cloud.init({
 
 const db = cloud.database();
 const fail = (message) => ({ success: false, message });
+const { getMemberRole, pickUserForMemberUpgrade } = require("./identity-utils");
 
 const normalizeRole = (role) => {
   const value = String(role || "").trim();
@@ -105,9 +106,8 @@ exports.main = async (event = {}) => {
 
     const userRes = await db.collection("users")
       .where({ openid })
-      .limit(1)
       .get();
-    const user = (userRes.data || [])[0];
+    const user = pickUserForMemberUpgrade(userRes.data || []);
 
     if (user) {
       await db.collection("users")
@@ -116,8 +116,9 @@ exports.main = async (event = {}) => {
           data: {
             name,
             studentId,
+            userType: "member",
             verified: true,
-            role: user.role || "user",
+            role: getMemberRole(user.role),
             updatedAt: now,
           },
         });
@@ -127,6 +128,7 @@ exports.main = async (event = {}) => {
           openid,
           name,
           studentId,
+          userType: "member",
           role: "user",
           verified: true,
           createdAt: now,

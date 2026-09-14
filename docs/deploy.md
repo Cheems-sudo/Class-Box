@@ -41,6 +41,8 @@
 - `updateNotice`
 - `updateNoticePin`
 - `verifyMember`
+- `verifyGuestAccess`
+- `clearGuestAccess`
 
 启用 AI 快速发布时部署：
 
@@ -64,7 +66,7 @@
 
 班级助手通过 SDK 的 `streamText()` 在云函数内部读取增量流，汇总完整回答后返回前端。单次 SDK 请求限制为 45 秒、整条处理链限制为 55 秒，为 60 秒云函数超时预留 5 秒收尾时间。只对限流、上游故障和连接重置等可恢复错误重试一次；认证、权限、配置、额度、格式、超时和取消错误不重试。检索无匹配时不会调用 AI，也不会消耗每日 AI 次数。
 
-班级助手按 openid 限制频率：所有角色每分钟最多 3 次；普通成员和管理员每天最多 20 次，超级管理员每天最多 50 次。每日计数按北京时间自然日区分。只有检索到候选内容、准备进入 AI 调用的请求才计次；无匹配结果和固定补充说明不计次。进入 AI 阶段后，即使用户停止回答或上游调用失败，也会保留本次计数，避免通过取消或故障重放绕过限额。
+班级助手允许正式成员和合法访客使用同一个页面、知识库和检索回答链。按 openid 限制频率：所有身份每分钟最多 3 次；普通成员、管理员和访客每天最多 20 次，超级管理员每天最多 50 次。每日计数按北京时间自然日区分。只有检索到候选内容、准备进入 AI 调用的请求才计次；无匹配结果和固定补充说明不计次。进入 AI 阶段后，即使用户停止回答或上游调用失败，也会保留本次计数，避免通过取消或故障重放绕过限额。
 
 ## 3. 创建数据库集合
 
@@ -72,6 +74,7 @@
 
 - `notices`
 - `users`
+- `guest_access_codes`
 - `admin_invite_codes`
 - `class_members`
 - `subscribers`
@@ -101,6 +104,28 @@
 `handbook_versions` 用于保存学生手册版本信息，`handbook_chunks` 用于保存学生手册切片内容，`class_assistant_logs` 用于记录班级助手调用情况，`class_assistant_requests` 用于传递短期请求状态和后端取消信号，`class_assistant_gaps` 用于保存未找到明确规定的问题。
 
 `operation_logs` 用于身份认证、管理员授权、事项发布、编辑、删除等关键操作日志。
+
+`guest_access_codes` 只保存公共访问码的 SHA-256 摘要和 `enabled` 状态，只允许 `verifyGuestAccess` 读取。示例：
+
+```json
+{
+  "codeHash": "sha256_hex_example",
+  "enabled": true,
+  "createdAt": "2026-06-01T00:00:00.000Z",
+  "updatedAt": "2026-06-01T00:00:00.000Z"
+}
+```
+
+使用足够长且不可猜测的公共访问码。可在 PowerShell 中执行以下命令生成摘要；`Read-Host` 输入的访问码不会直接写入命令历史：
+
+```powershell
+$guestCode = Read-Host "输入访客访问码"
+$guestBytes = [Text.Encoding]::UTF8.GetBytes($guestCode.Trim())
+$guestHash = [Security.Cryptography.SHA256]::Create().ComputeHash($guestBytes)
+[BitConverter]::ToString($guestHash).Replace("-", "").ToLowerInvariant()
+```
+
+将输出值填入 `codeHash`。更换访问码时先把旧记录设为 `enabled: false`，再添加新摘要记录，不需要重新部署云函数。
 
 建议定期在数据库控制台按 `expiresAt` 筛选并手动删除 `security_counters`、`class_assistant_requests` 和 `class_assistant_gaps` 中的过期记录，并根据运营需要为日志设置保留周期。
 
@@ -138,6 +163,7 @@
 建议尽量收紧数据库权限：
 
 - 普通用户不应直接写入 `notices`，发布应通过 `createNotice` 云函数。
+- 客户端不得直接读写 `guest_access_codes`，也不得直接写入 `users`；访客身份只能由 `verifyGuestAccess` 和 `clearGuestAccess` 维护。
 - 普通用户不应直接写入 `subscribers`，订阅授权应通过 `saveNoticeSubscriber` 云函数保存。
 - 普通用户不应直接读写 `feedbacks`，反馈提交应通过 `submitFeedback` 云函数，超级管理员查看应通过 `listFeedbacks` 云函数。
 - 普通用户不应直接写入 `security_counters`。
@@ -273,6 +299,8 @@
 - 所有已启用功能所需的云函数均已部署。
 - 超级管理员查看反馈前，`listFeedbacks` 已部署。
 - 所有已启用功能所需的数据库集合均已创建。
+- `guest_access_codes` 已创建、客户端读写已关闭，并已写入启用的 SHA-256 摘要记录。
+- `checkAdmin`、`verifyMember`、`verifyGuestAccess`、`clearGuestAccess` 和 `askClassAssistant` 已部署为本次身份模型对应版本。
 - `feedbacks`、`security_counters` 和 `operation_logs` 已创建且权限收紧。
 - 如启用 AI 辅助发布，`parseNoticeWithAI` 已使用“云端安装依赖”部署，`@cloudbase/node-sdk`、`ws` 和 `security.msgSecCheck` 权限均已生效。
 - 如启用班级助手，`askClassAssistant` 已使用“云端安装依赖”部署，`@cloudbase/node-sdk`、`ws`、`security.msgSecCheck` 权限和 60 秒超时配置均已生效。

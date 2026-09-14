@@ -8,6 +8,12 @@ const {
 } = require("./ai-utils");
 const { expandContinuationChunks, rankChunks } = require("./retrieval-utils");
 const { expandQuestionAliases, getSupplementalAnswer } = require("./supplemental-answers");
+const {
+  getAssistantDailyLimit,
+  isRequestOwnedByOther,
+  normalizeAssistantRole,
+  resolveAssistantIdentity,
+} = require("./identity-utils");
 
 cloud.init({
   env: cloud.DYNAMIC_CURRENT_ENV,
@@ -36,9 +42,7 @@ const fail = (message, errorType, details = {}) => ({
 });
 
 const normalizeRole = (role) => {
-  const value = String(role || "").trim();
-
-  return value === "superAdmin" || value === "admin" ? value : "user";
+  return normalizeAssistantRole(role);
 };
 
 const getErrorCode = (value) => Number(value && (value.errCode !== undefined ? value.errCode : value.errcode));
@@ -120,7 +124,7 @@ const writeCounter = async (transaction, counter, openid, current) => {
 
 // 在事务中消费操作配额，防止并发请求绕过频率限制。
 const consumeRateLimit = async (openid, role) => {
-  const dailyLimit = normalizeRole(role) === "superAdmin" ? 50 : 20;
+  const dailyLimit = getAssistantDailyLimit(role);
   const dailyCounter = buildCounter(openid, "class_assistant_daily", getShanghaiDateKey(), 24 * 60 * 60 * 1000);
   const minuteCounter = buildCounter(openid, "class_assistant_minute", String(Math.floor(Date.now() / (60 * 1000)) * 60 * 1000), 60 * 1000);
 
@@ -187,7 +191,7 @@ const checkText = async (content, openid) => {
 };
 
 // 记录审计或辅助数据；记录失败不应掩盖主业务结果。
-const writeUsageLog = async ({ openid, role, handbookVersion, questionLength, matchedChunkIds, outcome, errorType, model, latencyMs, stageLatencies, traceId, aiInvoked, aiSucceeded }) => {
+const writeUsageLog = async ({ openid, role, userType, handbookVersion, questionLength, matchedChunkIds, outcome, errorType, model, latencyMs, stageLatencies, traceId, aiInvoked, aiSucceeded }) => {
   if (!openid) {
     return;
   }
@@ -197,6 +201,7 @@ const writeUsageLog = async ({ openid, role, handbookVersion, questionLength, ma
       data: {
         openid,
         role: normalizeRole(role),
+        userType: userType === "guest" ? "guest" : (userType === "member" ? "member" : null),
         handbookVersion: String(handbookVersion || ""),
         questionLength: Number(questionLength) || 0,
         matchedChunkIds: Array.isArray(matchedChunkIds) ? matchedChunkIds : [],
@@ -359,7 +364,7 @@ const cancelRequest = async (requestId, openid) => {
       current = null;
     }
 
-    if (current && current.openid !== openid) {
+    if (isRequestOwnedByOther(current, openid)) {
       return fail("无权停止该请求", "permission");
     }
 
@@ -653,6 +658,7 @@ exports.main = async (event = {}) => {
     : `server_${Date.now()}_${Math.random().toString(16).slice(2)}`;
   let openid = "";
   let actor = null;
+  let userType = null;
   let handbookVersion = "";
   let matchedChunkIds = [];
   let model = getSafeEnv("AI_MODEL") || "hy3-preview";
@@ -674,6 +680,7 @@ exports.main = async (event = {}) => {
   const usage = (values = {}) => writeUsageLog({
     openid,
     role: actor && actor.role || "user",
+    userType,
     handbookVersion,
     questionLength: question.length,
     matchedChunkIds,
@@ -698,12 +705,11 @@ exports.main = async (event = {}) => {
     }
 
     const userRes = await runStage("identityMs", () => db.collection("users")
-      .where({ openid, verified: true })
+      .where({ openid })
       .get());
-    const users = userRes.data || [];
-    actor = users.find((user) => normalizeRole(user.role) === "superAdmin")
-      || users.find((user) => normalizeRole(user.role) === "admin")
-      || users[0];
+    const identity = resolveAssistantIdentity(userRes.data || []);
+    actor = identity.actor;
+    userType = identity.userType;
 
     if (!actor) {
       await usage({ outcome: "permission_denied", errorType: "permission" });

@@ -25,6 +25,8 @@ Page({
     isLoading: false,
     loadError: false,
   },
+  authCheckPromise: null,
+  isIdentityRouting: false,
   onLoad() {
     this.checkMemberVerification();
   },
@@ -51,11 +53,15 @@ Page({
   },
   // 在后续处理前验证输入和业务约束，失败时立即终止无效流程。
   checkMemberVerification(options = {}) {
+    if (this.authCheckPromise) {
+      return this.authCheckPromise;
+    }
+
     this.setData({
       authLoading: true,
     });
 
-    return wx.cloud.callFunction({
+    const request = wx.cloud.callFunction({
       name: "checkAdmin",
     }).then((res) => {
       const result = res.result || {};
@@ -65,28 +71,25 @@ Page({
       }
 
       const verified = result.verified === true;
+      const isMember = result.isMember === true || verified;
+      const isGuest = result.isGuest === true;
+
+      if (!isMember) {
+        this.clearNoticeState();
+
+        if (options.stopRefresh) {
+          wx.stopPullDownRefresh();
+        }
+
+        return this.routeByIdentity(isGuest
+          ? "/pages/class-assistant/class-assistant"
+          : "/pages/identity-select/identity-select");
+      }
 
       this.setData({
         authLoading: false,
         verified,
       });
-
-      if (!verified) {
-        this.setData({
-          noticeList: [],
-          importantNoticeList: [],
-          filteredNoticeList: [],
-          runningNoticeCount: 0,
-          importantNoticeCount: 0,
-          isLoading: false,
-          loadError: false,
-        });
-
-        if (options.stopRefresh) {
-          wx.stopPullDownRefresh();
-        }
-        return null;
-      }
 
       return this.loadNotices(options);
     }).catch(() => {
@@ -110,7 +113,48 @@ Page({
         icon: "none",
       });
       return null;
+    }).finally(() => {
+      if (this.authCheckPromise === request) {
+        this.authCheckPromise = null;
+      }
     });
+
+    this.authCheckPromise = request;
+    return request;
+  },
+  clearNoticeState() {
+    this.setData({
+      noticeList: [],
+      importantNoticeList: [],
+      filteredNoticeList: [],
+      runningNoticeCount: 0,
+      importantNoticeCount: 0,
+      isLoading: false,
+      loadError: false,
+    });
+  },
+  routeByIdentity(url) {
+    if (this.isIdentityRouting) {
+      return null;
+    }
+
+    this.isIdentityRouting = true;
+    wx.reLaunch({
+      url,
+      fail: () => {
+        this.isIdentityRouting = false;
+        this.setData({
+          authLoading: false,
+          verified: false,
+          loadError: true,
+        });
+        wx.showToast({
+          title: "页面打开失败，请重试",
+          icon: "none",
+        });
+      },
+    });
+    return null;
   },
   // 读取并整理 loadNotices 所需的数据，异步完成后再同步业务状态。
   loadNotices(options = {}) {

@@ -22,10 +22,32 @@ page {
   padding: 4rpx 4rpx 20rpx;
 }
 
+.assistant-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20rpx;
+}
+
 .assistant-subtitle {
   color: #667085;
   font-size: 26rpx;
   line-height: 1.45;
+}
+
+.identity-switch {
+  flex: 0 0 auto;
+  padding: 8rpx 14rpx;
+  border-radius: 999rpx;
+  background: #edf3ff;
+  color: #0052d9;
+  font-size: 23rpx;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.identity-switch:active {
+  opacity: 0.72;
 }
 
 .assistant-hint {

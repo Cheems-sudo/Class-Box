@@ -1,6 +1,7 @@
 // 页面逻辑：管理 detail 页面的状态、用户交互与数据请求。
 const supportedAttachmentTypes = ["pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx"];
 const editNoticeStorageKey = "pendingEditNotice";
+const { redirectGuestToAssistant } = require("../../utils/identity");
 
 Page({
   data: {
@@ -102,6 +103,11 @@ Page({
         if (!result.success) {
           throw new Error(result.message || "checkAdmin failed");
         }
+
+        if (redirectGuestToAssistant(result, this, () => {
+          this.pendingNoticeId = "";
+          this.setData({ detail: null, canManage: false });
+        })) return;
 
         const verified = result.verified === true;
 

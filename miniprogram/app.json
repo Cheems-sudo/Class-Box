@@ -9,6 +9,8 @@
     "pages/feedback-admin/feedback-admin",
     "pages/admin-auth/admin-auth",
     "pages/member-verify/member-verify",
+    "pages/identity-select/identity-select",
+    "pages/guest-access/guest-access",
     "pages/class-assistant/class-assistant",
     "pages/my/my"
   ],

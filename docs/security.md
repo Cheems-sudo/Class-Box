@@ -14,6 +14,7 @@
 - 真实学生姓名和学号。
 - 未获公开授权的学生手册 PDF、文本和切片数据。
 - 管理员和超级管理员邀请码。
+- 访客公共访问码及其 SHA-256 摘要。
 - `cloud://` 云文件地址和云存储 fileID。
 - `access_token`、`secret`、`key`、`password`、`token` 等凭据。
 
@@ -50,6 +51,7 @@ AI 快速发布和班级助手均通过云环境的 CloudBase Node SDK 调用。
 以下操作应始终通过云函数完成：
 
 - 成员身份认证。
+- 访客访问码校验和访客身份清除。
 - 管理员邀请码校验。
 - 发布事项。
 - 编辑事项。
@@ -62,7 +64,7 @@ AI 快速发布和班级助手均通过云环境的 CloudBase Node SDK 调用。
 - 提交意见反馈。
 - 查看用户反馈。
 
-普通用户不应直接写入 `notices`、`subscribers`、`feedbacks`、`security_counters`、`operation_logs` 等关键集合，也不应直接读写手册、班级助手日志和取消信号集合。反馈提交应通过 `submitFeedback`，反馈查看应通过 `listFeedbacks` 校验超级管理员权限；班级助手问答和停止请求应通过 `askClassAssistant` 校验成员身份。数据库权限建议见 [database-permissions.md](database-permissions.md)。
+客户端不应直接写入 `users`、`notices`、`subscribers`、`feedbacks`、`security_counters`、`operation_logs` 等关键集合，也不应直接读取访客访问码摘要、手册、班级助手日志和取消信号集合。反馈提交应通过 `submitFeedback`，反馈查看应通过 `listFeedbacks` 校验超级管理员权限；班级助手问答和停止请求应通过 `askClassAssistant` 校验正式成员或合法访客身份。数据库权限建议见 [database-permissions.md](database-permissions.md)。
 
 小程序使用 `wx.cloud.callFunction` 调用 `askClassAssistant`，不依赖公网 HTTP 路由。`askClassAssistant` 不应暴露未启用身份认证的 HTTP 路由。
 
@@ -72,6 +74,7 @@ AI 快速发布和班级助手均通过云环境的 CloudBase Node SDK 调用。
 
 - `class_members`：包含班级成员姓名、学号和绑定状态。
 - `users`：包含用户 openid、认证状态和权限角色。
+- `guest_access_codes`：包含访客公共访问码的 SHA-256 摘要和启用状态。
 - `admin_invite_codes`：包含管理员/超级管理员邀请码。
 - `subscribers`：包含订阅消息授权记录。
 - `feedbacks`：包含用户身份和反馈内容。
@@ -86,7 +89,8 @@ AI 快速发布和班级助手均通过云环境的 CloudBase Node SDK 调用。
 
 建议做法：
 
-- `class_members` 和 `admin_invite_codes` 不对普通用户开放直接读写。
+- `class_members`、`guest_access_codes` 和 `admin_invite_codes` 不对客户端开放直接读写。
+- `users` 禁止客户端写入，`verified`、`userType` 和 `role` 只能由身份云函数维护。
 - `subscribers` 只通过 `saveNoticeSubscriber` 写入。
 - `feedbacks` 只通过 `submitFeedback` 写入，并只通过 `listFeedbacks` 向超级管理员返回必要字段。
 - `security_counters` 只由云函数维护。
@@ -107,6 +111,8 @@ AI 快速发布和班级助手均通过云环境的 CloudBase Node SDK 调用。
 - 邀请码使用后立即标记为 `used: true`。
 - 不在前端、日志或报错信息中展示完整邀请码。
 - 如需记录授权来源，只记录角色、成功/失败状态、失败原因和脱敏后的 `codePrefix`。
+
+访客公共访问码允许多人长期共用，但只能在 `verifyGuestAccess` 服务端校验。数据库仅保存 SHA-256 摘要；前端、仓库、日志和截图中不得保存真实访问码或摘要。更换访问码时禁用旧摘要并写入新摘要，无需修改小程序代码。
 
 ## 日志安全
 

@@ -1,5 +1,6 @@
 // 页面逻辑：管理 my 页面的状态、用户交互与数据请求。
 const config = require("../../config.js");
+const { redirectGuestToAssistant } = require("../../utils/identity");
 const noticeTemplateId = config.subscribeTemplateId;
 
 Page({
@@ -36,6 +37,8 @@ Page({
         if (!result.success) {
           throw new Error(result.message || "checkAdmin failed");
         }
+
+        if (redirectGuestToAssistant(result, this)) return null;
 
         this.setData({
           authLoading: false,

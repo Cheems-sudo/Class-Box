@@ -6,16 +6,7 @@ cloud.init({
 });
 
 const db = cloud.database();
-
-const normalizeRole = (role) => {
-  const value = String(role || "").trim();
-
-  if (value === "superAdmin" || value === "admin") {
-    return value;
-  }
-
-  return "user";
-};
+const { resolveIdentity } = require("./identity-utils");
 
 // 集中编排参数校验、权限控制、数据操作和异常响应。
 exports.main = async () => {
@@ -29,18 +20,8 @@ exports.main = async () => {
       })
       .get();
 
-    const users = adminRes.data || [];
-    const verifiedUsers = users.filter((item) => item.verified === true);
-    const isSuperAdmin = verifiedUsers.some(
-      (user) => normalizeRole(user.role) === "superAdmin"
-    );
-    const isRegularAdmin = verifiedUsers.some(
-      (user) => normalizeRole(user.role) === "admin"
-    );
-    const isAdmin = isSuperAdmin || isRegularAdmin;
-    const role = isSuperAdmin ? "superAdmin" : (isRegularAdmin ? "admin" : "user");
-    const user = verifiedUsers[0] || users[0] || {};
-    const verified = user.verified === true;
+    const identity = resolveIdentity(adminRes.data || []);
+    const { user, verified, userType, isMember, isGuest, isAdmin, isSuperAdmin, role } = identity;
 
     return {
       success: true,
@@ -49,6 +30,9 @@ exports.main = async () => {
       isSuperAdmin,
       role,
       verified,
+      userType,
+      isMember,
+      isGuest,
       name: verified ? (user.name || "") : "",
       studentId: verified ? (user.studentId || "") : "",
     };

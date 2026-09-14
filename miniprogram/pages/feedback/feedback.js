@@ -1,13 +1,42 @@
 // 页面逻辑：管理 feedback 页面的状态、用户交互与数据请求。
 const maxLength = 300;
 const minLength = 2;
+const { redirectGuestToAssistant } = require("../../utils/identity");
 
 Page({
   data: {
     content: "",
     contentLength: 0,
     maxLength,
+    authLoading: true,
     submitting: false,
+  },
+
+  onShow() {
+    this.checkIdentity();
+  },
+
+  checkIdentity() {
+    this.setData({ authLoading: true });
+    return wx.cloud.callFunction({ name: "checkAdmin" }).then((res) => {
+      const result = res.result || {};
+      if (!result.success) throw new Error(result.message || "checkAdmin failed");
+
+      if (redirectGuestToAssistant(result, this, () => {
+        this.setData({ content: "", contentLength: 0 });
+      })) return null;
+
+      this.setData({ authLoading: false });
+      return result;
+    }).catch((error) => {
+      if (this.guestRedirecting) return null;
+      console.error("feedback identity check failed", {
+        errMsg: String(error && (error.errMsg || error.message) || ""),
+      });
+      this.setData({ authLoading: false });
+      wx.showToast({ title: "身份检查失败，请稍后重试", icon: "none" });
+      return null;
+    });
   },
 
   onContentInput(event) {
@@ -21,7 +50,7 @@ Page({
 
   // 提交前完成校验并锁定重复操作，统一处理成功回写和失败恢复。
   submitFeedback() {
-    if (this.data.submitting) {
+    if (this.data.authLoading || this.data.submitting) {
       return;
     }
 

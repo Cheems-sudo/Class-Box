@@ -1,7 +1,7 @@
 {
-  "name": "checkAdmin",
+  "name": "verifyGuestAccess",
   "version": "1.0.0",
-  "description": "",
+  "description": "Validates the shared guest access code and creates an OpenID-scoped guest identity",
   "main": "index.js",
   "scripts": {
     "test": "node --check index.js && node --check identity-utils.js && node --test test/*.test.js"

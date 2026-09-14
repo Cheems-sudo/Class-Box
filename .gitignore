@@ -12,6 +12,7 @@ dist/
 build/
 tmp/
 .temp/
+/ClassBox_backups/
 .DS_Store
 Thumbs.db
 cloudbaserc.json

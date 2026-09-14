@@ -1,4 +1,6 @@
 // 页面逻辑：管理 admin-auth 页面的状态、用户交互与数据请求。
+const { redirectGuestToAssistant } = require("../../utils/identity");
+
 Page({
   data: {
     form: {
@@ -29,6 +31,8 @@ Page({
       if (!result.success) {
         throw new Error(result.message || "checkAdmin failed");
       }
+
+      if (redirectGuestToAssistant(result, this)) return null;
 
       this.setData({
         authLoading: false,

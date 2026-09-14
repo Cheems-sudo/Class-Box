@@ -1,4 +1,5 @@
 // 页面逻辑：管理 publish 页面的状态、用户交互与数据请求。
+const { redirectGuestToAssistant } = require("../../utils/identity");
 const initialForm = {
   title: "",
   category: "考试安排",
@@ -178,8 +179,10 @@ Page({
     this.checkPublishPermission();
   },
   onShow() {
-    this.consumePendingEditNotice();
-    this.checkPublishPermission({ silent: this.hasCheckedPublishPermission === true });
+    this.checkPublishPermission({ silent: this.hasCheckedPublishPermission === true })
+      .then((canPublish) => {
+        if (canPublish) this.consumePendingEditNotice();
+      });
   },
   // 在后续处理前验证输入和业务约束，失败时立即终止无效流程。
   checkPublishPermission(options = {}) {
@@ -203,6 +206,8 @@ Page({
         if (!result.success) {
           throw new Error(result.message || "checkAdmin failed");
         }
+
+        if (redirectGuestToAssistant(result, this)) return null;
 
         const verified = result.verified === true;
         const canPublish = verified && result.isAdmin === true;

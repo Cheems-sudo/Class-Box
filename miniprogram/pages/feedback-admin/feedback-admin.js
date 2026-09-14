@@ -1,5 +1,6 @@
 // 页面逻辑：管理 feedback-admin 页面的状态、用户交互与数据请求。
 const pageSize = 50;
+const { redirectGuestToAssistant } = require("../../utils/identity");
 
 Page({
   data: {
@@ -12,12 +13,31 @@ Page({
   },
 
   onLoad() {
-    this.loadFeedbacks({ reset: true });
+    this.checkIdentityAndLoad({ reset: true });
   },
 
   onPullDownRefresh() {
-    this.loadFeedbacks({ reset: true }).finally(() => {
+    this.checkIdentityAndLoad({ reset: true }).finally(() => {
       wx.stopPullDownRefresh();
+    });
+  },
+
+  checkIdentityAndLoad(options = {}) {
+    return wx.cloud.callFunction({ name: "checkAdmin" }).then((res) => {
+      const result = res.result || {};
+      if (!result.success) throw new Error(result.message || "checkAdmin failed");
+
+      if (redirectGuestToAssistant(result, this, () => {
+        this.setData({ feedbackList: [], hasMore: false, nextCursor: null });
+      })) return null;
+
+      return this.loadFeedbacks(options);
+    }).catch((error) => {
+      if (this.guestRedirecting) return null;
+      const message = error && error.message ? error.message : "身份检查失败，请稍后重试";
+      this.setData({ loading: false, loadingMore: false, errorMessage: message });
+      wx.showToast({ title: message, icon: "none" });
+      return null;
     });
   },
 
@@ -86,7 +106,7 @@ Page({
   },
 
   retryLoad() {
-    this.loadFeedbacks({ reset: true });
+    this.checkIdentityAndLoad({ reset: true });
   },
 
   // 兼容不同来源和历史版本的数据，并统一为当前模块使用的稳定结构。

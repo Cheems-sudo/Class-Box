@@ -1,5 +1,6 @@
 // 页面逻辑：管理 my-posts 页面的状态、用户交互与数据请求。
 const pageSize = 20;
+const { redirectGuestToAssistant } = require("../../utils/identity");
 
 Page({
   data: {
@@ -36,6 +37,10 @@ Page({
       if (!result.success) {
         throw new Error(result.message || "checkAdmin failed");
       }
+
+      if (redirectGuestToAssistant(result, this, () => {
+        this.setData({ noticeList: [], openid: "" });
+      })) return null;
 
       const verified = result.verified === true;
       const role = String(result.role || "").trim();

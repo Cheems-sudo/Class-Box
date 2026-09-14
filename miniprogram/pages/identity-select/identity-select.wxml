@@ -1,0 +1,25 @@
+<view class="page">
+  <view class="page-head">
+    <view class="page-title">选择使用方式</view>
+    <view class="page-desc">请选择适合你的方式进入班级盒子</view>
+  </view>
+
+  <view class="state-card" wx:if="{{authLoading}}">
+    <view class="state-title">身份检查中...</view>
+    <view class="state-desc">正在确认你的使用方式</view>
+  </view>
+
+  <view class="option-list" wx:else>
+    <view class="option-card">
+      <view class="option-title">班级成员</view>
+      <view class="option-desc">认证班级身份后，可使用班级通知、事项管理等完整功能。</view>
+      <button class="primary-button" bindtap="goMemberVerify" hover-class="button-pressed">班级成员认证</button>
+    </view>
+
+    <view class="option-card">
+      <view class="option-title">AI 助手访客</view>
+      <view class="option-desc">无需班级成员身份，可使用学生文件 AI 助手。</view>
+      <button class="secondary-button" bindtap="goGuestAccess" hover-class="button-pressed">访客进入</button>
+    </view>
+  </view>
+</view>

@@ -1,7 +1,7 @@
 {
-  "name": "checkAdmin",
+  "name": "clearGuestAccess",
   "version": "1.0.0",
-  "description": "",
+  "description": "Clears guest-only user records for the current WeChat OpenID",
   "main": "index.js",
   "scripts": {
     "test": "node --check index.js && node --check identity-utils.js && node --test test/*.test.js"

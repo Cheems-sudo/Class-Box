@@ -9,6 +9,27 @@ page {
   box-sizing: border-box;
 }
 
+.state-card {
+  padding: 68rpx 30rpx;
+  border-radius: 20rpx;
+  background: #ffffff;
+  border: 1rpx solid #e7ecf3;
+  text-align: center;
+  box-shadow: 0 10rpx 28rpx rgba(15, 23, 42, 0.045);
+}
+
+.state-title {
+  color: #475569;
+  font-size: 30rpx;
+  font-weight: 700;
+}
+
+.state-desc {
+  margin-top: 10rpx;
+  color: #94a3b8;
+  font-size: 25rpx;
+}
+
 .header {
   padding: 18rpx 4rpx 24rpx;
 }

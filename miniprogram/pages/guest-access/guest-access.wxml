@@ -1,0 +1,30 @@
+<view class="page">
+  <view class="access-card">
+    <view class="page-title">AI 助手访客</view>
+    <view class="page-desc">输入访问码后即可使用学生文件 AI 助手</view>
+
+    <view class="field">
+      <view class="field-label">访问码</view>
+      <input
+        class="form-input"
+        value="{{accessCode}}"
+        placeholder="请输入访问码"
+        placeholder-class="input-placeholder"
+        password
+        confirm-type="done"
+        bindinput="onAccessCodeInput"
+        bindconfirm="submitAccess"
+        disabled="{{submitting}}"
+      />
+    </view>
+
+    <view class="error-message" wx:if="{{errorMessage}}">{{errorMessage}}</view>
+
+    <button
+      class="submit-button"
+      loading="{{submitting}}"
+      disabled="{{submitting}}"
+      bindtap="submitAccess"
+    >进入 AI 助手</button>
+  </view>
+</view>

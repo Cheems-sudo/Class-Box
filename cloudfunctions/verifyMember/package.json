@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "node --check index.js"
+    "test": "node --check index.js && node --check identity-utils.js && node --test test/*.test.js"
   },
   "author": "",
   "license": "MIT",

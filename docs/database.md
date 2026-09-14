@@ -72,7 +72,8 @@
 | `openid` | 用户 openid |
 | `name` | 已认证成员姓名 |
 | `studentId` | 已认证成员学号 |
-| `role` | 用户角色，支持 `user`、`admin`、`superAdmin` |
+| `userType` | 身份类型：正式成员为 `member`，访客为 `guest`；旧成员可缺失该字段 |
+| `role` | 用户角色，支持 `user`、`admin`、`superAdmin`、`guest` |
 | `verified` | 是否完成班级成员身份认证 |
 | `createdAt` | 创建时间 |
 | `updatedAt` | 更新时间 |
@@ -84,8 +85,33 @@
   "openid": "openid_example",
   "name": "示例学生",
   "studentId": "2026000000",
+  "userType": "member",
   "role": "user",
   "verified": true,
+  "createdAt": "2026-06-01T00:00:00.000Z",
+  "updatedAt": "2026-06-01T00:00:00.000Z"
+}
+```
+
+兼容规则：任何 `verified: true` 的旧记录都视为正式成员，不要求迁移 `userType`。访客必须保持 `userType: "guest"`、`role: "guest"`、`verified: false`，并按各自 OpenID 保存独立记录。
+
+## guest_access_codes
+
+用途：保存可供多人长期共用的访客访问码摘要。客户端不得直接读取或写入该集合。
+
+| 字段 | 含义 |
+| --- | --- |
+| `codeHash` | 去除访问码首尾空格后计算的 SHA-256 十六进制摘要 |
+| `enabled` | 是否允许使用该访问码 |
+| `createdAt` | 创建时间 |
+| `updatedAt` | 更新时间 |
+
+示例记录：
+
+```json
+{
+  "codeHash": "sha256_hex_example",
+  "enabled": true,
   "createdAt": "2026-06-01T00:00:00.000Z",
   "updatedAt": "2026-06-01T00:00:00.000Z"
 }
