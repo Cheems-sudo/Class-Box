@@ -1,5 +1,7 @@
 <!-- 页面结构：组织 index 页面的内容区域与交互控件。 -->
-<view class="page">
+<class-box-loading wx:if="{{showHomeLoading}}" />
+
+<view class="page" wx:else>
   <view class="hero">
     <view class="hero-main">
       <view class="title">事项概览</view>
@@ -17,12 +19,7 @@
     </view>
   </view>
 
-  <view class="state-card verify-card" wx:if="{{authLoading}}">
-    <view class="state-title">身份检查中...</view>
-    <view class="state-desc">正在确认班级成员身份</view>
-  </view>
-
-  <view class="state-card verify-card" wx:elif="{{!verified}}">
+  <view class="state-card verify-card" wx:if="{{!verified}}">
     <view class="state-title">请先完成班级身份验证</view>
     <view class="state-desc">验证后即可查看班级事项列表</view>
     <button class="verify-button" bindtap="goMemberVerify" hover-class="button-pressed" hover-stay-time="80">去验证</button>

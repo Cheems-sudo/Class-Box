@@ -8,7 +8,17 @@ Page({
     this.pageAlive = true;
   },
   onShow() {
+    this.hideNativeHomeButton();
     this.checkIdentity();
+  },
+  hideNativeHomeButton() {
+    if (typeof wx.hideHomeButton !== "function") {
+      return;
+    }
+
+    wx.hideHomeButton({
+      fail: () => {},
+    });
   },
   onUnload() {
     this.pageAlive = false;

@@ -20,22 +20,52 @@ Page({
     filteredNoticeList: [],
     runningNoticeCount: 0,
     importantNoticeCount: 0,
+    showHomeLoading: true,
     authLoading: true,
     verified: false,
     isLoading: false,
     loadError: false,
   },
-  authCheckPromise: null,
+  pageAlive: false,
+  homeRequestId: 0,
+  homeInitPromise: null,
   isIdentityRouting: false,
   onLoad() {
-    this.checkMemberVerification();
+    this.pageAlive = true;
+    this.syncTabBarVisibility();
   },
   onShow() {
-    this.checkMemberVerification();
+    this.runHomeInitialization();
+    this.syncTabBarVisibility();
+  },
+  onUnload() {
+    this.pageAlive = false;
+    this.homeRequestId += 1;
+    this.homeInitPromise = null;
+  },
+  syncTabBarVisibility() {
+    if (!this.pageAlive) {
+      return;
+    }
+
+    const method = this.isIdentityRouting || this.data.showHomeLoading
+      ? "hideTabBar"
+      : "showTabBar";
+
+    if (typeof wx[method] !== "function") {
+      return;
+    }
+
+    wx[method]({
+      animation: false,
+      fail: () => {},
+    });
   },
   onPullDownRefresh() {
-    this.checkMemberVerification({
-      stopRefresh: true,
+    const task = this.runHomeInitialization();
+
+    Promise.resolve(task).finally(() => {
+      wx.stopPullDownRefresh();
     });
   },
   onShareAppMessage() {
@@ -51,49 +81,80 @@ Page({
       query: "",
     };
   },
-  // 在后续处理前验证输入和业务约束，失败时立即终止无效流程。
-  checkMemberVerification(options = {}) {
-    if (this.authCheckPromise) {
-      return this.authCheckPromise;
+  isCurrentHomeRequest(requestId) {
+    return this.pageAlive && requestId === this.homeRequestId;
+  },
+  setHomeData(requestId, data) {
+    if (!this.isCurrentHomeRequest(requestId)) {
+      return Promise.resolve(false);
     }
 
-    this.setData({
-      authLoading: true,
+    return new Promise((resolve) => {
+      if (!this.isCurrentHomeRequest(requestId)) {
+        resolve(false);
+        return;
+      }
+
+      this.setData(data, () => {
+        resolve(this.isCurrentHomeRequest(requestId));
+      });
+    });
+  },
+  runHomeInitialization() {
+    if (!this.pageAlive || this.isIdentityRouting) {
+      return Promise.resolve(null);
+    }
+
+    if (this.homeInitPromise) {
+      return this.homeInitPromise;
+    }
+
+    const requestId = ++this.homeRequestId;
+    const task = this.initializeHome(requestId).finally(() => {
+      if (this.homeInitPromise === task) {
+        this.homeInitPromise = null;
+      }
     });
 
-    const request = wx.cloud.callFunction({
-      name: "checkAdmin",
-    }).then((res) => {
-      const result = res.result || {};
+    this.homeInitPromise = task;
+    return task;
+  },
+  async initializeHome(requestId) {
+    const loadingSet = await this.setHomeData(requestId, {
+      showHomeLoading: true,
+      authLoading: true,
+      loadError: false,
+    });
+
+    if (!loadingSet || !this.isCurrentHomeRequest(requestId)) {
+      return null;
+    }
+
+    this.syncTabBarVisibility();
+
+    let result;
+
+    try {
+      const response = await wx.cloud.callFunction({
+        name: "checkAdmin",
+      });
+
+      if (!this.isCurrentHomeRequest(requestId)) {
+        return null;
+      }
+
+      result = response.result || {};
 
       if (!result.success) {
         throw new Error(result.message || "checkAdmin failed");
       }
-
-      const verified = result.verified === true;
-      const isMember = result.isMember === true || verified;
-      const isGuest = result.isGuest === true;
-
-      if (!isMember) {
-        this.clearNoticeState();
-
-        if (options.stopRefresh) {
-          wx.stopPullDownRefresh();
-        }
-
-        return this.routeByIdentity(isGuest
-          ? "/pages/class-assistant/class-assistant"
-          : "/pages/identity-select/identity-select");
+    } catch (error) {
+      if (!this.isCurrentHomeRequest(requestId)) {
+        return null;
       }
 
-      this.setData({
-        authLoading: false,
-        verified,
-      });
-
-      return this.loadNotices(options);
-    }).catch(() => {
-      this.setData({
+      await this.setHomeData(requestId, {
+        showHomeLoading: false,
         authLoading: false,
         verified: false,
         noticeList: [],
@@ -105,25 +166,50 @@ Page({
         loadError: true,
       });
 
-      if (options.stopRefresh) {
-        wx.stopPullDownRefresh();
+      if (this.isCurrentHomeRequest(requestId)) {
+        this.syncTabBarVisibility();
+        wx.showToast({
+          title: "网络超时，请稍后重试",
+          icon: "none",
+        });
       }
-      wx.showToast({
-        title: "网络超时，请稍后重试",
-        icon: "none",
-      });
+
       return null;
-    }).finally(() => {
-      if (this.authCheckPromise === request) {
-        this.authCheckPromise = null;
+    }
+
+    if (!this.isCurrentHomeRequest(requestId)) {
+      return null;
+    }
+
+    const verified = result.verified === true;
+    const isMember = result.isMember === true || verified;
+    const isGuest = result.isGuest === true;
+
+    if (!isMember) {
+      await this.clearNoticeState(requestId);
+
+      if (!this.isCurrentHomeRequest(requestId)) {
+        return null;
       }
+
+      return this.routeByIdentity(isGuest
+        ? "/pages/class-assistant/class-assistant"
+        : "/pages/identity-select/identity-select", requestId);
+    }
+
+    const memberSet = await this.setHomeData(requestId, {
+      authLoading: false,
+      verified,
     });
 
-    this.authCheckPromise = request;
-    return request;
+    if (!memberSet) {
+      return null;
+    }
+
+    return this.loadNotices(requestId);
   },
-  clearNoticeState() {
-    this.setData({
+  clearNoticeState(requestId) {
+    return this.setHomeData(requestId, {
       noticeList: [],
       importantNoticeList: [],
       filteredNoticeList: [],
@@ -133,113 +219,146 @@ Page({
       loadError: false,
     });
   },
-  routeByIdentity(url) {
-    if (this.isIdentityRouting) {
-      return null;
+  routeByIdentity(url, requestId) {
+    if (this.isIdentityRouting || !this.isCurrentHomeRequest(requestId)) {
+      return Promise.resolve(false);
     }
 
     this.isIdentityRouting = true;
-    wx.reLaunch({
-      url,
-      fail: () => {
-        this.isIdentityRouting = false;
-        this.setData({
-          authLoading: false,
-          verified: false,
-          loadError: true,
-        });
-        wx.showToast({
-          title: "页面打开失败，请重试",
-          icon: "none",
-        });
-      },
+    this.syncTabBarVisibility();
+    return new Promise((resolve) => {
+      wx.reLaunch({
+        url,
+        success: () => resolve(true),
+        fail: async () => {
+          if (!this.isCurrentHomeRequest(requestId)) {
+            resolve(false);
+            return;
+          }
+
+          this.isIdentityRouting = false;
+          await this.setHomeData(requestId, {
+            showHomeLoading: false,
+            authLoading: false,
+            verified: false,
+            loadError: true,
+          });
+
+          if (this.isCurrentHomeRequest(requestId)) {
+            this.syncTabBarVisibility();
+            wx.showToast({
+              title: "页面打开失败，请重试",
+              icon: "none",
+            });
+          }
+
+          resolve(false);
+        },
+      });
     });
-    return null;
   },
   // 读取并整理 loadNotices 所需的数据，异步完成后再同步业务状态。
-  loadNotices(options = {}) {
-    this.setData({
+  async loadNotices(requestId) {
+    const loadingSet = await this.setHomeData(requestId, {
+      showHomeLoading: true,
       isLoading: true,
       loadError: false,
     });
 
-    this.fetchVisibleNotices()
-      .then((list) => {
-        const noticeList = list.map((notice) => {
-          const category = this.normalizeCategory(notice.category);
-          const timeLabel = this.normalizeTimeLabel(notice.timeLabel || this.getDefaultTimeLabel(category));
-          const isExpired = this.isNoticeExpired(notice);
-          const courseText = String(notice.course || "").trim();
-          const locationText = String(notice.location || notice.place || "").trim();
-          const publisherNameText = this.getPublisherNameText(notice.publisherName);
+    if (!loadingSet || !this.isCurrentHomeRequest(requestId)) {
+      return null;
+    }
 
-          return {
-            ...notice,
-            category,
-            displayCategory: this.getCategoryShortName(category),
-            categoryClass: this.getCategoryClass(category),
-            timeLabel,
-            courseLabel: this.getCourseLabel(category),
-            courseText,
-            locationLabel: this.getLocationLabel(category),
-            locationText,
-            publisherNameText,
-            isPinned: notice.isPinned === true,
-            isExpired,
-            statusText: isExpired ? "已过期" : "进行中",
-            timeText: this.formatTimeRange(notice.deadline, notice.endTime),
-            important: notice.important === true || notice.isImportant === true,
-            place: notice.location,
-          };
-        }).sort((a, b) => {
-          if (a.isPinned !== b.isPinned) {
-            return a.isPinned ? -1 : 1;
-          }
+    this.syncTabBarVisibility();
 
-          const sortResult = this.getSortTime(a) - this.getSortTime(b);
+    try {
+      const list = await this.fetchVisibleNotices();
 
-          if (sortResult !== 0) {
-            return sortResult;
-          }
+      if (!this.isCurrentHomeRequest(requestId)) {
+        return null;
+      }
 
-          return String(a.deadline || "").localeCompare(String(b.deadline || ""));
-        });
+      const noticeList = list.map((notice) => {
+        const category = this.normalizeCategory(notice.category);
+        const timeLabel = this.normalizeTimeLabel(notice.timeLabel || this.getDefaultTimeLabel(category));
+        const isExpired = this.isNoticeExpired(notice);
+        const courseText = String(notice.course || "").trim();
+        const locationText = String(notice.location || notice.place || "").trim();
+        const publisherNameText = this.getPublisherNameText(notice.publisherName);
 
-        this.setData({
-          noticeList,
-          importantNoticeList: this.getImportantNoticeList(noticeList),
-          runningNoticeCount: noticeList.filter((notice) => !notice.isExpired).length,
-          importantNoticeCount: noticeList.filter((notice) => !notice.isExpired && (notice.important === true || notice.isImportant === true)).length,
-          isLoading: false,
-          loadError: false,
-        }, () => {
-          this.filterNotices();
-
-          if (options.stopRefresh) {
-            wx.stopPullDownRefresh();
-          }
-        });
-      })
-      .catch(() => {
-        this.setData({
-          noticeList: [],
-          importantNoticeList: [],
-          filteredNoticeList: [],
-          runningNoticeCount: 0,
-          importantNoticeCount: 0,
-          isLoading: false,
-          loadError: true,
-        });
-
-        if (options.stopRefresh) {
-          wx.stopPullDownRefresh();
+        return {
+          ...notice,
+          category,
+          displayCategory: this.getCategoryShortName(category),
+          categoryClass: this.getCategoryClass(category),
+          timeLabel,
+          courseLabel: this.getCourseLabel(category),
+          courseText,
+          locationLabel: this.getLocationLabel(category),
+          locationText,
+          publisherNameText,
+          isPinned: notice.isPinned === true,
+          isExpired,
+          statusText: isExpired ? "已过期" : "进行中",
+          timeText: this.formatTimeRange(notice.deadline, notice.endTime),
+          important: notice.important === true || notice.isImportant === true,
+          place: notice.location,
+        };
+      }).sort((a, b) => {
+        if (a.isPinned !== b.isPinned) {
+          return a.isPinned ? -1 : 1;
         }
 
+        const sortResult = this.getSortTime(a) - this.getSortTime(b);
+
+        if (sortResult !== 0) {
+          return sortResult;
+        }
+
+        return String(a.deadline || "").localeCompare(String(b.deadline || ""));
+      });
+      const readySet = await this.setHomeData(requestId, {
+        noticeList,
+        importantNoticeList: this.getImportantNoticeList(noticeList),
+        filteredNoticeList: this.getFilteredNoticeList(noticeList),
+        runningNoticeCount: noticeList.filter((notice) => !notice.isExpired).length,
+        importantNoticeCount: noticeList.filter((notice) => !notice.isExpired && (notice.important === true || notice.isImportant === true)).length,
+        isLoading: false,
+        loadError: false,
+        showHomeLoading: false,
+      });
+
+      if (readySet && this.isCurrentHomeRequest(requestId)) {
+        this.syncTabBarVisibility();
+      }
+
+      return readySet;
+    } catch (error) {
+      if (!this.isCurrentHomeRequest(requestId)) {
+        return null;
+      }
+
+      await this.setHomeData(requestId, {
+        showHomeLoading: false,
+        noticeList: [],
+        importantNoticeList: [],
+        filteredNoticeList: [],
+        runningNoticeCount: 0,
+        importantNoticeCount: 0,
+        isLoading: false,
+        loadError: true,
+      });
+
+      if (this.isCurrentHomeRequest(requestId)) {
+        this.syncTabBarVisibility();
         wx.showToast({
           title: "加载失败，请下拉刷新重试",
           icon: "none",
         });
-      });
+      }
+
+      return false;
+    }
   },
   async fetchVisibleNotices() {
     const db = wx.cloud.database();
@@ -497,10 +616,11 @@ Page({
       this.filterNotices();
     });
   },
-  filterNotices() {
-    const { activeCategory, activeStatus, searchKeyword, noticeList } = this.data;
+  getFilteredNoticeList(noticeList = this.data.noticeList) {
+    const { activeCategory, activeStatus, searchKeyword } = this.data;
     const keyword = searchKeyword.toLowerCase();
-    const filteredNoticeList = noticeList.filter((notice) => {
+
+    return noticeList.filter((notice) => {
       const matchCategory = activeCategory === "全部" || this.normalizeCategory(notice.category) === activeCategory;
       const matchStatus = activeStatus === "全部" || notice.statusText === activeStatus;
       const searchableText = `${notice.title || ""}${notice.content || ""}${notice.course || ""}`.toLowerCase();
@@ -520,10 +640,11 @@ Page({
 
       return String(a.deadline || "").localeCompare(String(b.deadline || ""));
     });
-
+  },
+  filterNotices(callback) {
     this.setData({
-      filteredNoticeList,
-    });
+      filteredNoticeList: this.getFilteredNoticeList(),
+    }, callback);
   },
   goDetail(e) {
     const noticeId = e.currentTarget.dataset.noticeId;

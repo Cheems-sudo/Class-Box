@@ -1,0 +1,24 @@
+<view class="class-box-loading" aria-hidden="true">
+  <view class="box-loader">
+    <view class="falling-card card-one">
+      <view class="card-accent"></view>
+      <view class="card-line line-long"></view>
+      <view class="card-line line-short"></view>
+    </view>
+    <view class="falling-card card-two">
+      <view class="card-accent"></view>
+      <view class="card-line line-long"></view>
+      <view class="card-line line-short"></view>
+    </view>
+    <view class="falling-card card-three">
+      <view class="card-accent"></view>
+      <view class="card-line line-long"></view>
+      <view class="card-line line-short"></view>
+    </view>
+    <view class="loader-box">
+      <view class="box-back"></view>
+      <view class="box-front"></view>
+      <view class="box-rim"></view>
+    </view>
+  </view>
+</view>
