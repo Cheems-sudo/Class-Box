@@ -1,15 +1,12 @@
-<view class="page">
+<class-box-loading wx:if="{{authLoading}}" />
+
+<view class="page" wx:else>
   <view class="page-head">
     <view class="page-title">选择使用方式</view>
     <view class="page-desc">请选择适合你的方式进入班级盒子</view>
   </view>
 
-  <view class="state-card" wx:if="{{authLoading}}">
-    <view class="state-title">身份检查中...</view>
-    <view class="state-desc">正在确认你的使用方式</view>
-  </view>
-
-  <view class="option-list" wx:else>
+  <view class="option-list">
     <view class="option-card">
       <view class="option-title">班级成员</view>
       <view class="option-desc">认证班级身份后，可使用班级通知、事项管理等完整功能。</view>

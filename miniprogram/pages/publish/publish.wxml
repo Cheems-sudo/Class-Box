@@ -1,10 +1,10 @@
 <!-- 页面结构：组织 publish 页面的内容区域与交互控件。 -->
 <page-meta page-style="{{aiModalVisible ? 'overflow: hidden;' : ''}}"></page-meta>
 
-<view class="page">
-  <view wx:if="{{authLoading}}" class="state-card">权限加载中...</view>
+<class-box-loading wx:if="{{authLoading}}" />
 
-  <view wx:elif="{{!verified}}" class="state-card no-permission-card">
+<view class="page" wx:else>
+  <view wx:if="{{!verified}}" class="state-card no-permission-card">
     <view class="no-permission-title">请先完成班级身份验证</view>
     <view class="no-permission-desc">验证后即可使用班级盒子主要功能</view>
     <button class="verify-button" bindtap="goMemberVerify">去验证</button>

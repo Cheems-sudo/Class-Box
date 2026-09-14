@@ -1,3 +1,6 @@
 {
-  "navigationBarTitleText": "管理员认证"
+  "navigationBarTitleText": "管理员认证",
+  "usingComponents": {
+    "class-box-loading": "/components/class-box-loading/class-box-loading"
+  }
 }

@@ -1,3 +1,6 @@
 {
-  "navigationBarTitleText": "意见反馈"
+  "navigationBarTitleText": "意见反馈",
+  "usingComponents": {
+    "class-box-loading": "/components/class-box-loading/class-box-loading"
+  }
 }

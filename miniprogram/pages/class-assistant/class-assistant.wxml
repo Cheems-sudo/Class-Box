@@ -1,5 +1,7 @@
 <!-- 页面结构：组织 class-assistant 页面的内容区域与交互控件。 -->
-<view class="page">
+<class-box-loading wx:if="{{authLoading}}" />
+
+<view class="page" wx:else>
   <scroll-view
     class="message-scroll"
     style="padding-bottom: {{scrollBottomPadding}}rpx;"
@@ -8,12 +10,7 @@
     scroll-into-view="{{scrollIntoView}}"
     enhanced
   >
-    <view class="state-card" wx:if="{{authLoading}}">
-      <view class="state-title">身份检查中...</view>
-      <view class="state-desc">正在确认班级成员身份</view>
-    </view>
-
-    <view class="state-card verify-card" wx:elif="{{!verified && !isGuest}}">
+    <view class="state-card verify-card" wx:if="{{!verified && !isGuest}}">
       <view class="state-title">请先完成身份认证</view>
       <view class="state-desc">认证后即可使用班级助手</view>
       <button class="verify-button" bindtap="goMemberVerify" hover-class="button-pressed" hover-stay-time="80">去认证</button>

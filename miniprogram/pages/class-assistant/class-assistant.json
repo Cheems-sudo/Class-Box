@@ -1,4 +1,7 @@
 {
   "navigationBarTitleText": "班级助手",
-  "enablePullDownRefresh": false
+  "enablePullDownRefresh": false,
+  "usingComponents": {
+    "class-box-loading": "/components/class-box-loading/class-box-loading"
+  }
 }

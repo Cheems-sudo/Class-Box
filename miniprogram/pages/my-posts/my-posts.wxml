@@ -1,16 +1,13 @@
 <!-- 页面结构：组织 my-posts 页面的内容区域与交互控件。 -->
-<view class="page">
+<class-box-loading wx:if="{{authLoading}}" />
+
+<view class="page" wx:else>
   <view class="header">
     <view class="title">我发布的事项</view>
     <view class="subtitle">查看和管理自己发布的内容</view>
   </view>
 
-  <view class="state-card" wx:if="{{authLoading}}">
-    <view class="state-title">身份检查中...</view>
-    <view class="state-desc">正在确认管理权限</view>
-  </view>
-
-  <view class="state-card" wx:elif="{{!verified}}">
+  <view class="state-card" wx:if="{{!verified}}">
     <view class="state-title">请先完成班级身份验证</view>
   </view>
 

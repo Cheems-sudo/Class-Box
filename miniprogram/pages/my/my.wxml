@@ -1,12 +1,9 @@
 <!-- 页面结构：组织 my 页面的内容区域与交互控件。 -->
-<view class="page">
-  <view class="profile-card">
-    <view class="profile-main" wx:if="{{authLoading}}">
-      <view class="profile-name muted">身份检查中...</view>
-      <view class="profile-student-id">正在同步你的班级身份</view>
-    </view>
+<class-box-loading wx:if="{{authLoading}}" />
 
-    <view class="profile-main" wx:elif="{{verified}}">
+<view class="page" wx:else>
+  <view class="profile-card">
+    <view class="profile-main" wx:if="{{verified}}">
       <view class="profile-name">{{name}}</view>
       <view class="profile-student-id">学号：{{studentId}}</view>
     </view>

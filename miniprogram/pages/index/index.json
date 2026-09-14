@@ -1,4 +1,7 @@
 {
   "navigationBarTitleText": "班级盒子",
-  "enablePullDownRefresh": true
+  "enablePullDownRefresh": true,
+  "usingComponents": {
+    "class-box-loading": "/components/class-box-loading/class-box-loading"
+  }
 }
