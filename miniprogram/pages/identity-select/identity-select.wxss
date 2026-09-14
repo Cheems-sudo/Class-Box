@@ -64,22 +64,12 @@ page {
   text-align: center;
 }
 
-.primary-button,
 .secondary-button {
   margin-top: 28rpx;
   height: 82rpx;
   border-radius: 16rpx;
   font-size: 29rpx;
   font-weight: 800;
-}
-
-.primary-button {
-  background: #0052d9;
-  color: #ffffff;
-  box-shadow: 0 10rpx 22rpx rgba(0, 82, 217, 0.18);
-}
-
-.secondary-button {
   background: #edf3ff;
   color: #0052d9;
 }
