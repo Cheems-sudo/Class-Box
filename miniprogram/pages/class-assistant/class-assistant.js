@@ -29,9 +29,20 @@ Page({
     this.pageAlive = true;
   },
   onShow() {
+    this.hideNativeHomeButton();
+
     if (!this.data.sending) {
       this.checkMemberVerification();
     }
+  },
+  hideNativeHomeButton() {
+    if (typeof wx.hideHomeButton !== "function") {
+      return;
+    }
+
+    wx.hideHomeButton({
+      fail: () => {},
+    });
   },
   onUnload() {
     this.pageAlive = false;

@@ -10,7 +10,7 @@
     <view class="option-card">
       <view class="option-title">班级成员</view>
       <view class="option-desc">认证班级身份后，可使用班级通知、事项管理等完整功能。</view>
-      <button class="primary-button" bindtap="goMemberVerify" hover-class="button-pressed">班级成员认证</button>
+      <button class="secondary-button" bindtap="goMemberVerify" hover-class="button-pressed">班级成员认证</button>
     </view>
 
     <view class="option-card">
