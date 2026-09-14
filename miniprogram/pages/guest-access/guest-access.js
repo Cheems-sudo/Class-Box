@@ -66,7 +66,7 @@ Page({
       }
 
       this.isRouting = true;
-      wx.redirectTo({
+      wx.reLaunch({
         url: "/pages/class-assistant/class-assistant",
         fail: () => {
           this.isRouting = false;
