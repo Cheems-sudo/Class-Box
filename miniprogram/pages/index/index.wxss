@@ -3,6 +3,156 @@ page {
   background: #f5f7fb;
 }
 
+.home-loading {
+  min-height: 100vh;
+  background: #f5f7fb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.box-loader {
+  position: relative;
+  width: 210rpx;
+  height: 240rpx;
+  transform: translateY(-22rpx);
+}
+
+.falling-card {
+  position: absolute;
+  z-index: 1;
+  top: 8rpx;
+  left: 50%;
+  width: 102rpx;
+  height: 66rpx;
+  padding: 13rpx 14rpx;
+  border-radius: 10rpx;
+  box-sizing: border-box;
+  background: #ffffff;
+  border: 1rpx solid #dbe7f6;
+  box-shadow: 0 8rpx 18rpx rgba(30, 41, 59, 0.08);
+  opacity: 0;
+  transform: translate3d(-50%, -38rpx, 0) scale(0.94);
+  animation: card-drop 2.2s cubic-bezier(0.35, 0, 0.25, 1) infinite;
+}
+
+.card-two {
+  animation-delay: 0.42s;
+}
+
+.card-three {
+  animation-delay: 0.84s;
+}
+
+.card-accent {
+  width: 24rpx;
+  height: 7rpx;
+  border-radius: 999rpx;
+  background: #2563eb;
+}
+
+.card-two .card-accent {
+  background: #10b981;
+}
+
+.card-three .card-accent {
+  background: #8b5cf6;
+}
+
+.card-line {
+  height: 6rpx;
+  margin-top: 9rpx;
+  border-radius: 999rpx;
+  background: #dbe4ef;
+}
+
+.line-long {
+  width: 72rpx;
+}
+
+.line-short {
+  width: 48rpx;
+  margin-top: 7rpx;
+}
+
+.loader-box {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  bottom: 8rpx;
+  width: 176rpx;
+  height: 104rpx;
+  transform: translate3d(-50%, 0, 0);
+  transform-origin: 50% 100%;
+  animation: box-settle 2.2s ease-in-out infinite;
+}
+
+.box-back,
+.box-front,
+.box-rim {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.box-back {
+  top: 13rpx;
+  height: 38rpx;
+  border-radius: 14rpx 14rpx 5rpx 5rpx;
+  background: #dceaff;
+  border: 2rpx solid #8ab7f2;
+}
+
+.box-front {
+  z-index: 3;
+  bottom: 0;
+  height: 78rpx;
+  border-radius: 8rpx 8rpx 18rpx 18rpx;
+  background: #eaf2ff;
+  border: 2rpx solid #8ab7f2;
+  box-shadow: 0 12rpx 24rpx rgba(37, 99, 235, 0.12);
+}
+
+.box-rim {
+  z-index: 4;
+  top: 22rpx;
+  height: 15rpx;
+  border-radius: 999rpx;
+  background: #ffffff;
+  border: 2rpx solid #8ab7f2;
+}
+
+@keyframes card-drop {
+  0%, 8% {
+    opacity: 0;
+    transform: translate3d(-50%, -38rpx, 0) scale(0.94);
+  }
+  14% {
+    opacity: 1;
+  }
+  48% {
+    opacity: 1;
+    transform: translate3d(-50%, 80rpx, 0) scale(1);
+  }
+  62%, 100% {
+    opacity: 0;
+    transform: translate3d(-50%, 128rpx, 0) scale(0.9);
+  }
+}
+
+@keyframes box-settle {
+  0%, 46%, 56%, 65%, 75%, 84%, 94%, 100% {
+    transform: translate3d(-50%, 0, 0) scale(1);
+  }
+  50%, 69%, 88% {
+    transform: translate3d(-50%, 5rpx, 0) scale(1.025, 0.97);
+  }
+  53%, 72%, 91% {
+    transform: translate3d(-50%, -2rpx, 0) scale(0.99, 1.015);
+  }
+}
+
 .page {
   min-height: 100vh;
   padding: 24rpx 28rpx 52rpx;
