@@ -85,7 +85,7 @@ cp cloudfunctions/saveNoticeSubscriber/config.example.js cloudfunctions/saveNoti
 
 然后在这些本地配置文件中填入自己的 AppID、云环境 ID 和订阅消息模板 ID，再使用微信开发者工具打开项目并部署云函数。
 
-AI 快速发布和班级助手均通过 `@cloudbase/node-sdk` 调用云环境中已启用的模型。模型选择由服务端环境变量配置，不需要配置 API Key 或 Base URL。服务端凭据不能写入小程序前端代码或提交到仓库。
+AI 快速发布和班级助手均通过各自云函数中的轻量 HTTPS 客户端调用 DeepSeek。两个云函数需要分别配置 `DEEPSEEK_API_KEY`，并可通过 `DEEPSEEK_MODEL` 选择模型；服务端凭据不能写入小程序前端代码或提交到仓库。
 
 完整部署步骤见 [docs/deploy.md](docs/deploy.md)。
 

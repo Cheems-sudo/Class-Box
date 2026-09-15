@@ -776,7 +776,7 @@ exports.main = async (event = {}) => {
       const errorType = error && error.errorType ? error.errorType : "network";
       if (errorType === "rate_limit") {
         rateLimitDiagnostics = {
-          rateLimitSource: error.rateLimitSource || (error.stage === "global_model_rate_limit" ? "global_qpm" : "upstream_model"),
+          rateLimitSource: error.rateLimitSource || "upstream_model",
           rateLimitKey: error.rateLimitKey,
           rateLimitCurrent: error.rateLimitCurrent,
           rateLimitLimit: error.rateLimitLimit,

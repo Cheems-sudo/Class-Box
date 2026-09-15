@@ -1,6 +1,7 @@
 // 云函数说明：封装 index 相关的服务端校验与数据处理流程。
 const cloud = require("wx-server-sdk");
-const tcb = require("@cloudbase/node-sdk");
+const { requestDeepSeek } = require("./deepseek-client");
+const { runWithSingleRetry, sanitizeErrorMessage } = require("./ai-utils");
 
 cloud.init({
   env: cloud.DYNAMIC_CURRENT_ENV,
@@ -9,8 +10,6 @@ cloud.init({
 const db = cloud.database();
 const inputMaxLength = 500;
 const aiTimeoutMs = 20000;
-const aiApp = tcb.init({ env: tcb.SYMBOL_CURRENT_ENV, timeout: aiTimeoutMs });
-const aiModel = aiApp.ai().createModel("cloudbase");
 const categories = ["考试安排", "作业信息", "活动信息", "班级通知", "其他"];
 const timeLabels = ["考试时间", "截止时间", "报名截止", "活动时间", "相关时间"];
 const stringLimits = {
@@ -45,7 +44,9 @@ const logSafeError = (action, error) => {
     errorType: String(error && error.errorType || ""),
     statusCode: Number(error && (error.statusCode || error.status)) || 0,
     requestId: String(error && (error.requestId || error.request_id) || ""),
-    channel: "cloudbase-node-sdk",
+    message: sanitizeErrorMessage(error && error.message),
+    stage: String(error && error.stage || ""),
+    aiProvider: "deepseek",
     rejected: Boolean(error && error.securityRejected),
   });
 };
@@ -53,8 +54,9 @@ const logSafeError = (action, error) => {
 const getSafeEnv = (name) => String(process.env[name] || "").trim();
 
 const getAiConfig = () => {
-  const model = getSafeEnv("AI_MODEL") || "hy3-preview";
-  return { model };
+  const apiKey = getSafeEnv("DEEPSEEK_API_KEY");
+  const model = getSafeEnv("DEEPSEEK_MODEL") || "deepseek-flash";
+  return { apiKey, model };
 };
 
 const getChinaTime = (date) => {
@@ -76,7 +78,7 @@ const getChinaTime = (date) => {
 };
 
 // 记录审计或辅助数据；记录失败不应掩盖主业务结果。
-const writeUsageLog = async ({ openid, role, inputLength, success, errorType, model, latencyMs }) => {
+const writeUsageLog = async ({ openid, role, inputLength, success, errorType, model, latencyMs, aiInvoked = false, aiSucceeded = false }) => {
   if (!openid) {
     return;
   }
@@ -90,6 +92,9 @@ const writeUsageLog = async ({ openid, role, inputLength, success, errorType, mo
         success: success === true,
         errorType: String(errorType || ""),
         model: String(model || ""),
+        aiProvider: "deepseek",
+        aiInvoked: aiInvoked === true,
+        aiSucceeded: aiSucceeded === true,
         latencyMs: Number(latencyMs) || 0,
         createdAt: new Date(),
       },
@@ -216,52 +221,11 @@ endTime 是完整结束时间，例如 2026-07-03 18:00。
 返回示例：
 {"title":"","category":"","timeLabel":"","course":"","deadline":"","endTime":"","location":"","content":"","isImportant":false,"warnings":[]}`;
 
-const classifyAiError = (error) => {
-  const source = error && typeof error === "object" ? error : {};
-  const message = String(source.message || error || "").toLowerCase();
-  const code = String(source.code || source.errCode || "").toLowerCase();
-  const statusCode = Number(source.statusCode || source.status) || 0;
-  const haystack = `${code} ${message}`;
-
-  if (statusCode === 401 || haystack.includes("invalid_api_key") || haystack.includes("authentication")) return "auth";
-  if (statusCode === 403 || haystack.includes("permission") || haystack.includes("not_allowed")) return "permission";
-  if (haystack.includes("token_quota") || haystack.includes("quota") || haystack.includes("insufficient")) return "quota";
-  if (statusCode === 429 || haystack.includes("rate") || haystack.includes("too many requests")) return "rate_limit";
-  if (statusCode === 404 || haystack.includes("model_not_found") || haystack.includes("model_disabled") || haystack.includes("config_missing")) return "config";
-  if (haystack.includes("timeout") || haystack.includes("timed out")) return "timeout";
-
-  return "network";
-};
-
-// 封装远端请求生命周期，统一处理超时、取消和服务端错误。
-const requestAi = async (config, messages) => {
-  try {
-    const result = await aiModel.generateText({
-      model: config.model,
-      messages,
-      temperature: 0.2,
-    }, {
-      timeout: aiTimeoutMs,
-    });
-
-    if (result.error) {
-      throw result.error;
-    }
-
-    return String(result.text || "");
-  } catch (error) {
-    throw Object.assign(error instanceof Error ? error : new Error("AI SDK request failed"), {
-      errorType: error && error.errorType || classifyAiError(error),
-    });
-  }
-};
-
 const parseAiContent = (content) => {
-  const text = String(content || "").trim();
-
-  if (!text || text.includes("```")) {
-    return null;
-  }
+  let text = String(content || "").trim();
+  const fenced = text.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+  if (fenced) text = fenced[1].trim();
+  if (!text || text.includes("```")) return null;
 
   try {
     return JSON.parse(text);
@@ -269,6 +233,19 @@ const parseAiContent = (content) => {
     return null;
   }
 };
+
+const draftFieldTypes = {
+  title: "string", category: "string", timeLabel: "string", course: "string",
+  deadline: "string", endTime: "string", location: "string", content: "string",
+  isImportant: "boolean", warnings: "array",
+};
+
+const hasValidDraftSchema = (rawDraft) => rawDraft && typeof rawDraft === "object"
+  && !Array.isArray(rawDraft)
+  && Object.entries(draftFieldTypes).every(([key, type]) => Object.prototype.hasOwnProperty.call(rawDraft, key)
+    && (type === "array"
+      ? Array.isArray(rawDraft[key]) && rawDraft[key].every((value) => typeof value === "string")
+      : typeof rawDraft[key] === type));
 
 const trimByLimit = (value, limit) => {
   const text = String(value || "").trim();
@@ -394,7 +371,7 @@ exports.main = async (event = {}) => {
   const input = String(event.text || event.input || "").trim();
   let openid = "";
   let actor = null;
-  let model = getSafeEnv("AI_MODEL") || "hy3-preview";
+  let model = getSafeEnv("DEEPSEEK_MODEL") || "deepseek-flash";
 
   try {
     openid = cloud.getWXContext().OPENID;
@@ -433,6 +410,13 @@ exports.main = async (event = {}) => {
       return fail("输入内容可能不符合规范，请修改后再试", "security");
     }
 
+    const aiConfig = getAiConfig();
+    model = aiConfig.model;
+    if (!aiConfig.apiKey) {
+      await writeUsageLog({ openid, role: actor.role, inputLength: input.length, success: false, errorType: "config", model, latencyMs: Date.now() - startAt });
+      return fail(getAiErrorMessage("config"), "config");
+    }
+
     try {
       const allowed = await consumeRateLimit(openid, "parse_notice_ai", 3, 60 * 1000);
 
@@ -446,32 +430,30 @@ exports.main = async (event = {}) => {
       return fail("生成过于频繁，请稍后再试", "rate_counter");
     }
 
-    const aiConfig = getAiConfig();
-    model = aiConfig.model;
-
     let aiRes;
 
     try {
-      aiRes = await requestAi(aiConfig, [
+      const response = await runWithSingleRetry(() => requestDeepSeek(aiConfig, [
         { role: "system", content: buildSystemPrompt(getChinaTime(new Date())) },
         { role: "user", content: input },
-      ]);
+      ], { timeoutMs: aiTimeoutMs }), { delayMs: 500 });
+      aiRes = response.text;
     } catch (error) {
       const errorType = error && error.errorType ? error.errorType : "network";
       logSafeError("parseNoticeWithAI request failed", error);
-      await writeUsageLog({ openid, role: actor.role, inputLength: input.length, success: false, errorType, model, latencyMs: Date.now() - startAt });
+      await writeUsageLog({ openid, role: actor.role, inputLength: input.length, success: false, errorType, model, latencyMs: Date.now() - startAt, aiInvoked: true, aiSucceeded: false });
       return fail(getAiErrorMessage(errorType), errorType);
     }
 
     const rawDraft = parseAiContent(aiRes);
-    const draft = sanitizeDraft(rawDraft);
+    const draft = hasValidDraftSchema(rawDraft) ? sanitizeDraft(rawDraft) : null;
 
     if (!draft) {
-      await writeUsageLog({ openid, role: actor.role, inputLength: input.length, success: false, errorType: "format", model, latencyMs: Date.now() - startAt });
+      await writeUsageLog({ openid, role: actor.role, inputLength: input.length, success: false, errorType: "format", model, latencyMs: Date.now() - startAt, aiInvoked: true, aiSucceeded: true });
       return fail("返回格式异常，请重试", "format");
     }
 
-    await writeUsageLog({ openid, role: actor.role, inputLength: input.length, success: true, errorType: "", model, latencyMs: Date.now() - startAt });
+    await writeUsageLog({ openid, role: actor.role, inputLength: input.length, success: true, errorType: "", model, latencyMs: Date.now() - startAt, aiInvoked: true, aiSucceeded: true });
 
     return {
       success: true,
@@ -483,3 +465,5 @@ exports.main = async (event = {}) => {
     return fail("服务连接失败，请稍后重试或联系小程序管理员", "unknown");
   }
 };
+
+exports.__test = { getAiConfig, hasValidDraftSchema, parseAiContent, sanitizeDraft };

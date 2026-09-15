@@ -10,10 +10,10 @@
 4. 复制 `miniprogram/config.example.js` 为 `miniprogram/config.js`，填入自己的云环境 ID 和订阅消息模板 ID。
 5. 复制 `cloudfunctions/sendNoticeMessage/config.example.js` 为 `cloudfunctions/sendNoticeMessage/config.js`，填入自己的订阅消息模板 ID。
 6. 复制 `cloudfunctions/saveNoticeSubscriber/config.example.js` 为 `cloudfunctions/saveNoticeSubscriber/config.js`，填入同一个订阅消息模板 ID。
-7. 如需启用 AI 辅助发布或班级助手，在云环境中启用受 CloudBase Node SDK 支持的模型服务：
-   - `parseNoticeWithAI` 和 `askClassAssistant` 均通过 `@cloudbase/node-sdk` 使用云函数环境身份调用，不需要配置 API Key 和 Base URL。
-   - 两个云函数均可通过服务端环境变量选择已启用的模型。
-   - 部署两个云函数时均选择“云端安装依赖”，确保安装 `@cloudbase/node-sdk` 和 `ws`。
+7. 如需启用 AI 辅助发布或班级助手，分别为 `parseNoticeWithAI` 和 `askClassAssistant` 配置 DeepSeek：
+   - 两个云函数都必须单独设置 `DEEPSEEK_API_KEY`，不要假定云函数之间自动共享环境变量。
+   - 可设置 `DEEPSEEK_MODEL` 选择模型；未设置时默认使用 `deepseek-flash`。
+   - 部署两个云函数时均选择“云端安装依赖”；模型请求使用 Node 内置 HTTPS，不需要直接安装 `@cloudbase/node-sdk` 或 `ws`。
 
 不要提交以下文件：
 
@@ -64,7 +64,7 @@
 
 小程序通过 `wx.cloud.callFunction` 调用 `askClassAssistant`，不依赖公网 HTTP 路由。该函数不应配置未启用身份认证的公开路由；如需开放 HTTP 路由，必须启用经过验证的身份认证。
 
-班级助手通过 SDK 的 `streamText()` 在云函数内部读取增量流，汇总完整回答后返回前端。单次 SDK 请求限制为 45 秒、整条处理链限制为 55 秒，为 60 秒云函数超时预留 5 秒收尾时间。只对限流、上游故障和连接重置等可恢复错误重试一次；认证、权限、配置、额度、格式、超时和取消错误不重试。检索无匹配时不会调用 AI，也不会消耗每日 AI 次数。
+班级助手通过 DeepSeek Chat Completions API 在云函数内部生成完整回答后返回前端。单次模型请求限制为 45 秒、整条处理链限制为 55 秒，为 60 秒云函数超时预留 5 秒收尾时间。只对上游故障和连接重置等可恢复错误重试一次；认证、权限、配置、额度、格式、超时和取消错误不重试。检索无匹配时不会调用 AI，也不会消耗每日 AI 次数。
 
 班级助手允许正式成员和合法访客使用同一个页面、知识库和检索回答链。按 openid 限制频率：所有身份每分钟最多 3 次；普通成员、管理员和访客每天最多 20 次，超级管理员每天最多 50 次。每日计数按北京时间自然日区分。只有检索到候选内容、准备进入 AI 调用的请求才计次；无匹配结果和固定补充说明不计次。进入 AI 阶段后，即使用户停止回答或上游调用失败，也会保留本次计数，避免通过取消或故障重放绕过限额。
 
@@ -314,8 +314,8 @@ node scripts/build-handbook-chunks.js 2026
 - `guest_access_codes` 已创建、客户端读写已关闭，并已写入启用的 SHA-256 摘要记录。
 - `checkAdmin`、`verifyMember`、`verifyGuestAccess`、`clearGuestAccess` 和 `askClassAssistant` 已部署为本次身份模型对应版本。
 - `feedbacks`、`security_counters` 和 `operation_logs` 已创建且权限收紧。
-- 如启用 AI 辅助发布，`parseNoticeWithAI` 已使用“云端安装依赖”部署，`@cloudbase/node-sdk`、`ws` 和 `security.msgSecCheck` 权限均已生效。
-- 如启用班级助手，`askClassAssistant` 已使用“云端安装依赖”部署，`@cloudbase/node-sdk`、`ws`、`security.msgSecCheck` 权限和 60 秒超时配置均已生效。
+- 如启用 AI 辅助发布，`parseNoticeWithAI` 已设置 DeepSeek 环境变量、使用“云端安装依赖”部署，且 `security.msgSecCheck` 权限已生效。
+- 如启用班级助手，`askClassAssistant` 已设置 DeepSeek 环境变量、使用“云端安装依赖”部署，且 `security.msgSecCheck` 权限和 60 秒超时配置均已生效。
 - 如启用任一 AI 功能，云环境已启用受 CloudBase Node SDK 支持的模型服务，云函数通过环境身份调用模型。
 - 如启用班级助手，`handbook_versions` 和 `handbook_chunks` 数据已导入，只有一条 `active: true` 的手册版本，并已创建 `handbookVersion + sort` 非唯一复合索引。
 - 如启用班级助手，`class_assistant_requests` 已创建、客户端权限已关闭，并已制定手动清理过期记录的安排。
