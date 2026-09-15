@@ -3,6 +3,7 @@ const assert = require("node:assert/strict");
 const {
   getAssistantDailyLimit,
   getAssistantMinuteLimit,
+  isAssistantUserRateLimitExempt,
   isRequestOwnedByOther,
   resolveAssistantIdentity,
 } = require("../identity-utils");
@@ -44,13 +45,15 @@ test("member 与 guest 重复时优先最高权限 member", () => {
   assert.equal(identity.actor.role, "superAdmin");
 });
 
-test("普通用户为 3/min、20/day，superAdmin 为 10/min、50/day", () => {
+test("普通用户为 10/min、100/day，superAdmin 免除用户级额度", () => {
   ["guest", "user", "admin"].forEach((role) => {
-    assert.equal(getAssistantMinuteLimit(role), 3);
-    assert.equal(getAssistantDailyLimit(role), 20);
+    assert.equal(getAssistantMinuteLimit(role), 10);
+    assert.equal(getAssistantDailyLimit(role), 100);
+    assert.equal(isAssistantUserRateLimitExempt(role), false);
   });
-  assert.equal(getAssistantMinuteLimit("superAdmin"), 10);
-  assert.equal(getAssistantDailyLimit("superAdmin"), 50);
+  assert.equal(getAssistantMinuteLimit("superAdmin"), Infinity);
+  assert.equal(getAssistantDailyLimit("superAdmin"), Infinity);
+  assert.equal(isAssistantUserRateLimitExempt("superAdmin"), true);
 });
 
 test("guest 可以取消自己的请求但不能取消其他 OpenID 的请求", () => {

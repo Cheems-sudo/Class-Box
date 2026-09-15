@@ -3,6 +3,8 @@ const assert = require("node:assert/strict");
 const { requestDeepSeek, parseDeepSeekResponse } = require("../deepseek-client");
 const { runWithSingleRetry } = require("../ai-utils");
 const { parseModelAnswer } = require("../citation-utils");
+const { consumeUserQuota } = require("../rate-limit-utils");
+const { isAssistantUserRateLimitExempt } = require("../identity-utils");
 
 const success = (content = "回答\n引用片段：1") => ({
   statusCode: 200, headers: { "x-request-id": "req-1" },
@@ -82,4 +84,16 @@ test("即使底层错误意外包含 API Key，向上抛出的日志消息也会
   await assert.rejects(() => requestDeepSeek({ apiKey, model: "deepseek-flash" }, [], {
     requestImpl: async () => { throw new Error(`connection failed ${apiKey}`); },
   }), (error) => !error.message.includes(apiKey) && error.message.includes("[REDACTED]"));
+});
+
+test("superAdmin 仅绕过用户额度，DeepSeek 429 仍返回 rate_limit", async () => {
+  const bypass = await consumeUserQuota({
+    db: { runTransaction: async () => { throw new Error("should not run"); } },
+    counters: {}, limits: {}, bypass: isAssistantUserRateLimitExempt("superAdmin"),
+    readCounter: async () => null, writeCounter: async () => {},
+  });
+  assert.equal(bypass.success, true);
+  await assert.rejects(() => requestDeepSeek({ apiKey: "secret", model: "deepseek-flash" }, [], {
+    requestImpl: async () => ({ statusCode: 429, headers: {}, body: JSON.stringify({ error: { message: "rate limited" } }) }),
+  }), (error) => error.errorType === "rate_limit");
 });

@@ -113,8 +113,9 @@ const consumeInitialModelQuota = async ({
   return { success: true };
 });
 
-const consumeUserQuota = async ({ db, counters, limits, readCounter, writeCounter }) =>
-  db.runTransaction(async (transaction) => {
+const consumeUserQuota = async ({ db, counters, limits, readCounter, writeCounter, bypass = false }) => {
+  if (bypass) return { success: true, bypassed: true };
+  return db.runTransaction(async (transaction) => {
     const daily = await readCounter(transaction, counters.daily);
     const minute = await readCounter(transaction, counters.minute);
     if (isRateLimitReached(Number(daily && daily.count) || 0, limits.daily)) {
@@ -137,6 +138,7 @@ const consumeUserQuota = async ({ db, counters, limits, readCounter, writeCounte
     await writeCounter(transaction, counters.minute, counters.openid, minute);
     return { success: true };
   });
+};
 
 module.exports = {
   consumeGlobalModelQuota,

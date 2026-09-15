@@ -15,6 +15,7 @@ const {
 const {
   getAssistantDailyLimit,
   getAssistantMinuteLimit,
+  isAssistantUserRateLimitExempt,
   isRequestOwnedByOther,
   normalizeAssistantRole,
   resolveAssistantIdentity,
@@ -141,6 +142,7 @@ const consumeAssistantUserRateLimit = async (openid, role) => {
     limits: { daily: dailyLimit, minute: minuteLimit },
     readCounter,
     writeCounter,
+    bypass: isAssistantUserRateLimitExempt(role),
   });
 };
 

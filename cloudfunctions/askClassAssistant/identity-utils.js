@@ -49,9 +49,11 @@ const resolveAssistantIdentity = (users) => {
   };
 };
 
-const getAssistantMinuteLimit = (role) => normalizeAssistantRole(role) === "superAdmin" ? 10 : 3;
+const isAssistantUserRateLimitExempt = (role) => normalizeAssistantRole(role) === "superAdmin";
 
-const getAssistantDailyLimit = (role) => normalizeAssistantRole(role) === "superAdmin" ? 50 : 20;
+const getAssistantMinuteLimit = (role) => isAssistantUserRateLimitExempt(role) ? Infinity : 10;
+
+const getAssistantDailyLimit = (role) => isAssistantUserRateLimitExempt(role) ? Infinity : 100;
 
 const isRequestOwnedByOther = (request, openid) => Boolean(
   request && request.openid !== openid
@@ -60,6 +62,7 @@ const isRequestOwnedByOther = (request, openid) => Boolean(
 module.exports = {
   getAssistantDailyLimit,
   getAssistantMinuteLimit,
+  isAssistantUserRateLimitExempt,
   isRequestOwnedByOther,
   normalizeAssistantRole,
   resolveAssistantIdentity,
