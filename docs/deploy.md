@@ -66,7 +66,7 @@
 
 班级助手通过 DeepSeek Chat Completions API 在云函数内部生成完整回答后返回前端。单次模型请求限制为 45 秒、整条处理链限制为 55 秒，为 60 秒云函数超时预留 5 秒收尾时间。只对上游故障和连接重置等可恢复错误重试一次；认证、权限、配置、额度、格式、超时和取消错误不重试。检索无匹配时不会调用 AI，也不会消耗每日 AI 次数。
 
-班级助手允许正式成员和合法访客使用同一个页面、知识库和检索回答链。按 openid 限制频率：所有身份每分钟最多 3 次；普通成员、管理员和访客每天最多 20 次，超级管理员每天最多 50 次。每日计数按北京时间自然日区分。只有检索到候选内容、准备进入 AI 调用的请求才计次；无匹配结果和固定补充说明不计次。进入 AI 阶段后，即使用户停止回答或上游调用失败，也会保留本次计数，避免通过取消或故障重放绕过限额。
+班级助手允许正式成员和合法访客使用同一个页面、知识库和检索回答链。普通成员、管理员和访客按 openid 限制为每分钟最多 10 次、每天最多 100 次；超级管理员绕过用户级分钟和每日业务额度，不创建或消费个人限流计数器，但仍按统一逻辑处理 DeepSeek 上游鉴权、额度、429、超时和网络错误。每日计数按北京时间自然日区分。只有检索到候选内容、准备进入 AI 调用的请求才计次；无匹配结果和固定补充说明不计次。进入 AI 阶段后，即使用户停止回答或上游调用失败，也会保留本次计数，避免通过取消或故障重放绕过限额。
 
 ## 3. 创建数据库集合
 
@@ -316,7 +316,7 @@ node scripts/build-handbook-chunks.js 2026
 - `feedbacks`、`security_counters` 和 `operation_logs` 已创建且权限收紧。
 - 如启用 AI 辅助发布，`parseNoticeWithAI` 已设置 DeepSeek 环境变量、使用“云端安装依赖”部署，且 `security.msgSecCheck` 权限已生效。
 - 如启用班级助手，`askClassAssistant` 已设置 DeepSeek 环境变量、使用“云端安装依赖”部署，且 `security.msgSecCheck` 权限和 60 秒超时配置均已生效。
-- 如启用任一 AI 功能，云环境已启用受 CloudBase Node SDK 支持的模型服务，云函数通过环境身份调用模型。
+- 如启用任一 AI 功能，已分别为对应云函数设置 `DEEPSEEK_API_KEY`，并按需设置 `DEEPSEEK_MODEL`；旧的 `AI_MODEL`、`AI_GLOBAL_QPM_LIMIT`、`AI_API_KEY` 和 `AI_BASE_URL` 不再参与两个 AI 云函数的模型调用。
 - 如启用班级助手，`handbook_versions` 和 `handbook_chunks` 数据已导入，只有一条 `active: true` 的手册版本，并已创建 `handbookVersion + sort` 非唯一复合索引。
 - 如启用班级助手，`class_assistant_requests` 已创建、客户端权限已关闭，并已制定手动清理过期记录的安排。
 - 如启用班级助手，`class_assistant_gaps` 已创建、客户端权限已关闭，并按 `expiresAt` 手动清理超过30天的记录。

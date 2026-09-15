@@ -42,7 +42,7 @@
 
 这些文件已写入 `.gitignore`，正常情况下 Git 会自动忽略。
 
-AI 快速发布和班级助手均通过云环境的 CloudBase Node SDK 调用。模型选择应保存在服务端环境变量中，不应配置或记录 API Key、Base URL。模型配置不能写入小程序前端代码，也不能提交包含敏感凭据的配置文件。
+AI 快速发布和班级助手均通过各自云函数中的 HTTPS 客户端调用 DeepSeek。两个云函数必须分别通过服务端环境变量配置 `DEEPSEEK_API_KEY`，并可设置 `DEEPSEEK_MODEL`；API Key 不得写入前端、日志、仓库或返回结果。发送给 DeepSeek 的内容只应包含当前问题或事项文本、对应 Prompt 及回答所需的非敏感上下文，不应包含 openid、姓名、学号、角色记录或数据库内部 ID。
 
 ## 权限边界
 
@@ -130,7 +130,7 @@ AI 快速发布和班级助手均通过云环境的 CloudBase Node SDK 调用。
 - 班级助手的完整问题、完整回答和完整手册上下文。
 - AI API Key 或带凭据的请求头。
 
-班级助手错误日志只应记录 SDK 错误码、错误类型、可用的请求 ID、请求阶段、耗时、模型和调用渠道，不记录 SDK 原始响应正文。`class_assistant_logs` 可以记录问题长度和命中切片 ID，但不能保存问题原文。只有返回“学生手册中未找到明确规定”的问题会写入 `class_assistant_gaps`，不关联 openid；管理员按 `expiresAt` 手动清理超过30天的记录。
+班级助手错误日志只应记录 API 错误码、错误类型、可用的请求 ID、请求阶段、耗时、模型和调用供应商，不记录 DeepSeek 原始响应正文。`class_assistant_logs` 可以记录问题长度、脱敏候选摘要和命中切片 ID，但不能保存问题原文或完整手册上下文。只有返回“学生手册中未找到明确规定”的问题会写入 `class_assistant_gaps`，不关联 openid；管理员按 `expiresAt` 手动清理超过30天的记录。
 
 ## 内容安全
 

@@ -332,8 +332,10 @@
 | `role` | 调用时用户角色 |
 | `inputLength` | 管理员输入文本长度 |
 | `success` | AI 草稿生成是否成功 |
-| `errorType` | 失败类型，例如 `permission`、`rate_limit`、`security`、`config`、`network`、`format`、`quota` |
+| `errorType` | 失败类型，例如 `auth`、`permission`、`rate_limit`、`security`、`config`、`network`、`upstream`、`timeout`、`format`、`quota` |
 | `model` | 调用的 AI 模型名 |
+| `aiProvider` | AI 服务供应商，当前为 `deepseek` |
+| `aiInvoked` / `aiSucceeded` | 是否实际发起模型调用，以及模型接口是否成功返回 |
 | `latencyMs` | 本次调用耗时，单位毫秒 |
 | `createdAt` | 创建时间 |
 
@@ -346,7 +348,10 @@
   "inputLength": 32,
   "success": true,
   "errorType": "",
-  "model": "configured-model",
+  "model": "deepseek-flash",
+  "aiProvider": "deepseek",
+  "aiInvoked": true,
+  "aiSucceeded": true,
   "latencyMs": 1200,
   "createdAt": "2026-07-03T06:30:00.000Z"
 }
@@ -393,14 +398,20 @@
 | --- | --- |
 | `openid` / `role` | 调用用户及角色 |
 | `handbookVersion` | 本次检索使用的版本 |
+| `handbookDataVersion` | 当前手册数据指纹 |
+| `retrievalVersion` / `promptVersion` | 检索规则和 Prompt 版本 |
 | `questionLength` | 问题字符数 |
 | `matchedChunkIds` | 命中的切片 ID |
+| `matchedChunkSummary` | 脱敏后的最终候选标题、页码、条款、分数、概念覆盖和 continuation 标识 |
+| `contextLength` | 传给模型的手册上下文字符数 |
+| `noMatchSource` | 无匹配来源，例如 `retrieval_no_match` 或 `model_no_match` |
 | `outcome` | `answered`、`supplemental_answered`、`no_match`、`ai_failed`、`security_rejected`、`security_failed`、`rate_limited`、`permission_denied`、`input_rejected` 或 `config_failed` |
 | `errorType` | 细分错误类型 |
 | `model` | AI 模型名 |
+| `aiProvider` | AI 服务供应商，当前为 `deepseek` |
 | `latencyMs` | 端到端耗时 |
 | `stageLatencies` | 身份、安全、检索、限流和 AI 等阶段耗时 |
-| `traceId` | SDK 错误中可用的请求 ID；没有返回时为空字符串 |
+| `traceId` | DeepSeek 响应中可用的请求 ID；没有返回时为空字符串 |
 | `aiInvoked` / `aiSucceeded` | 是否实际调用 AI，以及网关是否返回可解析成功响应 |
 | `createdAt` | 创建时间 |
 
@@ -422,7 +433,7 @@
 
 ## class_assistant_requests
 
-用途：保存短期请求状态和服务端取消信号。前端停止后，运行中的云函数会读取该记录并取消 CloudBase SDK 的文本流和数据流。
+用途：保存短期请求状态和服务端取消信号。前端停止后，运行中的云函数会读取该记录并终止或忽略后续模型回答流程。
 
 | 字段 | 含义 |
 | --- | --- |
