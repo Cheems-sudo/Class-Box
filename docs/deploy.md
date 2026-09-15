@@ -260,6 +260,18 @@ $guestHash = [Security.Cryptography.SHA256]::Create().ComputeHash($guestBytes)
 
 同一版本重新生成切片后，必须先删除 `handbook_chunks` 中该 `handbookVersion` 的旧记录，再导入新文件，并同步更新 `handbook_versions.chunkCount`。不要直接追加导入，否则旧、新切片会重复命中。生成脚本会逐页校验源文本与输出切片的字符完整性；出现丢字时会直接失败，不应继续导入。
 
+### 学生手册年度更新
+
+仓库只保留一套通用构建脚本。将逐页文本保存为 `data/handbook-YYYY.txt`（PDF 页之间使用换页符 `\f`），并新增 `data/handbook-config/YYYY.json`。配置中的 `titleRules` 和 `sectionRules` 必须按该年度 PDF 正文逐项核对，不能沿用旧年度页码。
+
+```bash
+node scripts/build-handbook-chunks.js 2026
+```
+
+脚本会生成 `data/handbook_chunks_2026_import.json` 和 `data/handbook_versions_2026_import.json`，并校验页码、标题顺序、逐页字符重组、重复条款、稳定排序、版本一致性和 `chunkCount`。任一校验失败都不得导入。
+
+升级生产数据时，先导入 2026 chunks，再更新版本记录：保留 2025 记录并设为 `active: false`，仅将 2026 设为 `active: true`。版本切换不是事务操作时，应先关闭旧版本、确认没有 active 版本，再启用新版本，最后确认全库恰好一条 `active: true`。回滚时执行相反操作。切勿让两个版本同时 active；云函数会将此状态视为配置错误并拒绝回答。
+
 `handbook_versions` 至少需要一条启用版本，字段示例：
 
 ```json

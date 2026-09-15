@@ -1,294 +1,178 @@
-// 脚本说明：执行 build-handbook-chunks 所需的数据转换与文件生成流程。
 const fs = require("fs");
 const path = require("path");
 
 const rootDir = path.resolve(__dirname, "..");
 const dataDir = path.join(rootDir, "data");
-const sourcePath = path.join(dataDir, "handbook-2025.txt");
-const chunksImportPath = path.join(dataDir, "handbook_chunks_2025_import.json");
-const versionImportPath = path.join(dataDir, "handbook_versions_2025_import.json");
-
-const handbookVersion = "2025";
-const handbookName = "2025年学生手册";
-const sourceFileName = "附件2：《2025年学生手册》.pdf";
+const configDir = path.join(dataDir, "handbook-config");
 const minChunkLength = 180;
 const maxChunkLength = 1200;
-
-const sectionRules = [
-  { min: 1, section: "佛山大学简介" },
-  { min: 4, section: "国家法规" },
-  { min: 39, section: "研究生教务管理" },
-  { min: 121, section: "本科生教务管理" },
-  { min: 175, section: "学生日常管理" },
-  { min: 357, section: "团委学生会、社团管理、志愿服务、创新创业" },
-];
-
-const titleRules = [
-  { title: "佛山大学简介", page: 1 },
-  { title: "普通高等学校学生管理规定", page: 4 },
-  { title: "高等学校校园秩序管理若干规定", page: 23 },
-  { title: "学生伤害事故处理办法", page: 28 },
-  { title: "普通高等学校学生行为准则", page: 37 },
-  { title: "佛山大学研究生学籍管理规定", page: 39 },
-  { title: "佛山大学研究生课程教学管理办法", page: 54 },
-  { title: "佛山大学研究生课程免修实施办法", page: 63 },
-  { title: "佛山大学研究生专业实践(联合培养)管理规定", page: 66 },
-  { title: "佛山大学研究生学位论文开题报告实施办法", page: 72 },
-  { title: "佛山大学研究生学位论文中期检查实施办法", page: 77 },
-  { title: "佛山大学研究生分流实施办法", page: 80 },
-  { title: "佛山大学研究生卓越创新项目实施办法", page: 87 },
-  { title: "佛山大学研究生学位授予工作细则（试行）", page: 93 },
-  { title: "佛山大学学位论文作假行为处理办法实施细则", page: 107 },
-  { title: "佛山大学研究生学位论文质量管理办法", page: 112 },
-  { title: "佛山大学普通全日制本科生学籍管理规定", page: 121 },
-  { title: "佛山大学普通全日制本科生转专业实施管理办法", page: 147 },
-  { title: "佛山大学普通全日制本科毕业生学士学位授予工作细则", page: 154 },
-  { title: "佛山大学本科生公共选修课管理办法", page: 159 },
-  { title: "佛山大学本科生课程考试工作管理规定", page: 163 },
-  { title: "佛山大学学生综合测评实施方案", page: 175 },
-  { title: "佛山大学学生奖励管理规定", page: 181 },
-  { title: "佛山大学全日制本科学生国家奖助学金实施办法", page: 195 },
-  { title: "佛山大学学生资助工作实施办法", page: 204 },
-  { title: "佛山大学学生校内勤工助学管理办法", page: 225 },
-  { title: "佛山大学家庭经济困难学生认定办法", page: 241 },
-  { title: "佛山大学学生考勤与请假管理办法", page: 257 },
-  { title: "佛山大学学生违纪处分规定", page: 261 },
-  { title: "佛山大学全日制研究生国家奖助学金实施办法", page: 288 },
-  { title: "佛山大学全日制研究生“三助一辅”实施办法", page: 296 },
-  { title: "佛山大学学生档案管理规定", page: 301 },
-  { title: "佛山大学学生住宿管理规定", page: 307 },
-  { title: "佛山大学学费住宿费收费管理办法", page: 318 },
-  { title: "佛山大学心理健康教育与咨询工作管理规定", page: 326 },
-  { title: "佛山大学网络管理办法", page: 334 },
-  { title: "佛山大学图书馆指南", page: 353 },
-  { title: "佛山大学学生会章程", page: 357 },
-  { title: "佛山大学研究生会章程", page: 367 },
-  { title: "佛山大学“第二课堂成绩单”制度实施办法", page: 375 },
-  { title: "佛山大学学生学术基金管理办法", page: 379 },
-  { title: "佛山大学学生骨干管理办法", page: 386 },
-  { title: "佛山大学学生社团建设管理指引", page: 395 },
-  { title: "佛山大学青年志愿服务评比表彰工作指引", page: 402 },
-  { title: "佛山大学大学生创新创业孵化基地管理办法", page: 408 },
-].sort((a, b) => a.page - b.page);
-
-const cleanText = (text) => String(text || "")
-  .replace(/\r/g, "")
-  .replace(/[ \t]+/g, " ")
-  .replace(/\n{3,}/g, "\n\n")
-  .trim();
-
+const fail = (message) => { throw new Error(`[handbook build] ${message}`); };
+const cleanText = (text) => String(text || "").replace(/\r/g, "").replace(/[ \t]+/g, " ").replace(/\n{3,}/g, "\n\n").trim();
 const compactText = (text) => cleanText(text).replace(/\s+/g, "");
+// “网络管理办法”在旧目录中与正文“网络安全管理办法”不一致；仅在标题核验时忽略该一词差异。
+const comparableTitle = (text) => compactText(text).replace(/[()（）“”]/g, "").replace(/安全/g, "");
 
-const getSection = (pageText) => {
-  let section = sectionRules[0].section;
-
-  sectionRules.forEach((rule) => {
-    if (pageText >= rule.min) {
-      section = rule.section;
-    }
+const loadConfig = (version) => {
+  if (!/^\d{4}$/.test(version || "")) fail("usage: node scripts/build-handbook-chunks.js <YYYY>");
+  const configPath = path.join(configDir, `${version}.json`);
+  if (!fs.existsSync(configPath)) fail(`missing config: ${path.relative(rootDir, configPath)}`);
+  const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
+  ["version", "name", "sourceFileName", "textFileName"].forEach((key) => {
+    if (typeof config[key] !== "string" || !config[key].trim()) fail(`invalid config.${key}`);
   });
-
-  return section;
+  if (config.version !== version) fail(`config version ${config.version} does not match ${version}`);
+  if (!Number.isInteger(config.pdfPageOffset) || config.pdfPageOffset < 0) fail("invalid config.pdfPageOffset");
+  if (!Array.isArray(config.sectionRules) || !config.sectionRules.length) fail("sectionRules is empty");
+  if (!Array.isArray(config.titleRules) || !config.titleRules.length) fail("titleRules is empty");
+  return config;
 };
 
-const getTitle = (pageText) => {
-  let title = titleRules[0].title;
-
-  titleRules.forEach((rule) => {
-    if (pageText >= rule.page) {
-      title = rule.title;
-    }
+const validateRules = (config, pages) => {
+  const validateOrdered = (rules, numberKey, label) => {
+    let previous = 0;
+    const seen = new Set();
+    rules.forEach((rule, index) => {
+      const value = rule[numberKey];
+      const name = String(rule.title || rule.section || "").trim();
+      if (!Number.isInteger(value) || value < 1 || value <= previous) fail(`${label}[${index}] is not in strictly increasing page order`);
+      if (!name || seen.has(name)) fail(`${label}[${index}] has an empty or duplicate name`);
+      seen.add(name);
+      previous = value;
+    });
+  };
+  validateOrdered(config.sectionRules, "min", "sectionRules");
+  validateOrdered(config.titleRules, "page", "titleRules");
+  if (config.sectionRules[0].min !== 1 || config.titleRules[0].page !== 1) fail("rules must start at printed page 1");
+  config.titleRules.forEach((rule) => {
+    const page = pages[rule.page + config.pdfPageOffset - 1];
+    if (page === undefined) fail(`title page ${rule.page} is outside the source document`);
+    if (!comparableTitle(page).includes(comparableTitle(rule.title))) fail(`title not found on configured start page ${rule.page}: ${rule.title}`);
   });
-
-  return title;
 };
 
-const getPageText = (page, pageIndex) => {
-  const matches = page.match(/(?:^|\n)\s*(\d{1,3})\s*(?:\n|$)/g) || [];
-  const lastMatch = matches.length ? matches[matches.length - 1] : "";
-  const numberMatch = lastMatch.match(/\d{1,3}/);
-
-  if (numberMatch) {
-    return Number(numberMatch[0]);
-  }
-
-  return Math.max(1, pageIndex - 2);
+const getRuleValue = (rules, page, numberKey, valueKey) => {
+  let value = rules[0][valueKey];
+  rules.forEach((rule) => { if (page >= rule[numberKey]) value = rule[valueKey]; });
+  return value;
 };
 
-const normalizePage = (page) => cleanText(page
-  .split("\n")
-  .filter((line) => !/^\s*\d{1,3}\s*$/.test(line))
-  .join("\n"));
+const getPrintedPage = (page, pdfPageNumber, offset) => {
+  const expected = pdfPageNumber - offset;
+  if (expected < 1) return null;
+  const numbers = Array.from(page.matchAll(/(?:^|\n)\s*(\d{1,3})\s*(?=\n|$)/g)).map((match) => Number(match[1]));
+  if (numbers.filter((number) => number === expected).length !== 1) fail(`PDF page ${pdfPageNumber}: expected printed page marker ${expected}, found [${numbers.join(", ")}]`);
+  return expected;
+};
 
-const isCatalogPage = (content) => {
-  const lines = content.split("\n").filter((line) => line.trim());
-  const dottedLines = lines.filter((line) => /\.{6,}/.test(line)).length;
-
-  return /目\s*录/.test(content) || dottedLines >= 4;
+const normalizePage = (page, pageText) => {
+  let removed = false;
+  const lines = String(page).replace(/\r/g, "").split("\n").filter((line) => {
+    if (!removed && new RegExp(`^\\s*${pageText}\\s*$`).test(line)) { removed = true; return false; }
+    return true;
+  });
+  if (!removed) fail(`printed page ${pageText}: page marker was not removed`);
+  return cleanText(lines.join("\n"));
 };
 
 const splitByArticle = (text) => {
-  const articlePattern = /第[一二三四五六七八九十百零〇0-9]+条/g;
-  const matches = Array.from(text.matchAll(articlePattern));
-
-  if (!matches.length) {
-    return [{ article: "", content: text }];
-  }
-
+  const matches = Array.from(text.matchAll(/(?:^|\n)\s*(第[一二三四五六七八九十百零〇0-9]+条)/g));
+  if (!matches.length) return [{ article: "", content: text }];
   const segments = [];
   const prefix = text.slice(0, matches[0].index).trim();
-
-  // 页面开头可能是上一页条款的续文，不能因为不足最小切片长度而丢弃。
-  if (prefix) {
-    segments.push({ article: "", content: prefix });
-  }
-
-  matches.forEach((match, index) => {
-    const start = match.index;
-    const end = index + 1 < matches.length ? matches[index + 1].index : text.length;
-    segments.push({
-      article: match[0],
-      content: text.slice(start, end).trim(),
-    });
-  });
-
+  if (prefix) segments.push({ article: "", content: prefix });
+  matches.forEach((match, index) => segments.push({
+    article: match[1],
+    content: text.slice(match.index, index + 1 < matches.length ? matches[index + 1].index : text.length).trim(),
+  }));
   return segments.filter((item) => item.content);
 };
 
 const splitLongContent = (segment) => {
-  if (segment.content.length <= maxChunkLength) {
-    return [segment];
-  }
-
-  const paragraphs = segment.content.split(/\n+/).map((item) => item.trim()).filter(Boolean);
+  if (segment.content.length <= maxChunkLength) return [segment];
   const parts = [];
   let current = "";
-
-  paragraphs.forEach((paragraph) => {
-    if (current && `${current}\n${paragraph}`.length > maxChunkLength) {
-      parts.push(current);
-      current = paragraph;
-      return;
+  const push = () => { if (current) parts.push(current.trim()); current = ""; };
+  segment.content.split(/(?<=\n)|(?<=[。；！？])/).filter(Boolean).forEach((unit) => {
+    let remaining = unit;
+    while (remaining.length > maxChunkLength) {
+      const capacity = maxChunkLength - current.length - (current ? 1 : 0);
+      if (capacity > 0) { current = current ? `${current}\n${remaining.slice(0, capacity)}` : remaining.slice(0, capacity); remaining = remaining.slice(capacity); }
+      push();
     }
-
-    current = current ? `${current}\n${paragraph}` : paragraph;
+    if (current && current.length + 1 + remaining.length > maxChunkLength) push();
+    current = current ? `${current}\n${remaining}` : remaining;
   });
-
-  if (current) {
-    parts.push(current);
-  }
-
-  return parts.map((content, index) => ({
-    article: index === 0 ? segment.article : `${segment.article}续`.replace(/^续$/, ""),
-    content,
-  }));
+  push();
+  return parts.map((content, index) => ({ article: index === 0 || !segment.article ? segment.article : `${segment.article}（续${index}）`, content }));
 };
 
 const mergeShortSegments = (segments) => {
   const merged = [];
-
   segments.forEach((segment) => {
-    const last = merged[merged.length - 1];
-
-    const sameArticle = last && String(last.article || "") === String(segment.article || "");
-    const likelyInlineArticleReference = last && Boolean(last.article) && last.content.length < 40;
-
-    if ((sameArticle || likelyInlineArticleReference)
-      && last.content.length < minChunkLength
-      && `${last.content}\n${segment.content}`.length <= maxChunkLength) {
-      last.content = `${last.content}\n${segment.content}`;
-      return;
-    }
-
-    merged.push({ ...segment });
+    const last = merged.at(-1);
+    if (last && last.article === segment.article && last.content.length < minChunkLength && last.content.length + segment.content.length + 1 <= maxChunkLength) last.content += `\n${segment.content}`;
+    else merged.push({ ...segment });
   });
-
   return merged;
 };
 
 const buildKeywords = (text, title, section, article) => {
-  const source = `${title} ${section} ${article} ${text}`;
-  const terms = source.match(/[\u4e00-\u9fa5]{2,}|[A-Za-z0-9]{2,}/g) || [];
+  const terms = `${title} ${section} ${article} ${text}`.match(/[\u4e00-\u9fa5]{2,}|[A-Za-z0-9]{2,}/g) || [];
   const stopWords = new Set(["学生", "学校", "规定", "管理", "办法", "应当", "可以", "进行", "或者", "有关", "相关", "佛山", "大学"]);
   const counts = new Map();
-
-  terms.forEach((term) => {
-    const value = term.trim();
-    if (value.length < 2 || stopWords.has(value)) {
-      return;
-    }
-    counts.set(value, (counts.get(value) || 0) + 1);
-  });
-
-  return Array.from(counts.entries())
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 12)
-    .map(([term]) => term);
+  terms.forEach((term) => { if (!stopWords.has(term)) counts.set(term, (counts.get(term) || 0) + 1); });
+  return Array.from(counts.entries()).sort((a, b) => b[1] - a[1]).slice(0, 12).map(([term]) => term);
 };
 
-const readSource = () => fs.readFileSync(sourcePath, "utf8");
-
 const main = () => {
-  const text = readSource();
+  const config = loadConfig(process.argv[2]);
+  const sourcePath = path.join(dataDir, config.textFileName);
+  if (!fs.existsSync(sourcePath)) fail(`missing source text: ${path.relative(rootDir, sourcePath)}`);
+  const text = fs.readFileSync(sourcePath, "utf8");
+  if (!text.includes("\f")) fail("source text has no form-feed page boundaries");
+  if (text.includes("\uFFFD")) fail("source text contains Unicode replacement characters");
   const pages = text.split("\f");
+  if (pages.at(-1).trim() === "") pages.pop();
+  validateRules(config, pages);
+
   const chunks = [];
-
+  const duplicateKeys = new Set();
+  let previousSort = -1;
   pages.forEach((page, pageIndex) => {
-    const pageText = getPageText(page, pageIndex);
-    const content = normalizePage(page);
-
-    if (!content || pageText < 1 || isCatalogPage(content)) {
-      return;
-    }
-
-    const section = getSection(pageText);
-    const title = getTitle(pageText);
-    const articleSegments = splitByArticle(content).flatMap(splitLongContent);
-    const segments = mergeShortSegments(articleSegments);
-    const emittedContents = [];
-
-    segments.forEach((segment, segmentIndex) => {
+    const pageText = getPrintedPage(page, pageIndex + 1, config.pdfPageOffset);
+    if (pageText === null) return;
+    const content = normalizePage(page, pageText);
+    if (!content) fail(`printed page ${pageText} has no extracted body text`);
+    const section = getRuleValue(config.sectionRules, pageText, "min", "section");
+    const title = getRuleValue(config.titleRules, pageText, "page", "title");
+    const emitted = [];
+    mergeShortSegments(splitByArticle(content).flatMap(splitLongContent)).forEach((segment, segmentIndex) => {
       const chunkContent = cleanText(segment.content);
-
-      if (!chunkContent) {
-        return;
-      }
-
-      emittedContents.push(chunkContent);
-
-      const article = segment.article.replace("续", "");
-
-      chunks.push({
-        handbookVersion,
-        section,
-        title,
-        article,
-        pageText,
-        content: chunkContent,
-        keywords: buildKeywords(chunkContent, title, section, article),
-        sort: pageText * 100 + segmentIndex,
-        createdAt: new Date(),
-      });
+      const sort = pageText * 1000 + segmentIndex;
+      if (!chunkContent || !Number.isInteger(pageText) || pageText < 1) fail(`invalid chunk at printed page ${pageText}`);
+      if (segmentIndex >= 1000 || sort <= previousSort) fail(`sort is not strictly increasing at printed page ${pageText}`);
+      previousSort = sort;
+      const key = segment.article
+        ? `${title}\u0000${segment.article}\u0000${compactText(chunkContent)}`
+        : `${title}\u0000page:${pageText}\u0000${compactText(chunkContent)}`;
+      if (duplicateKeys.has(key)) fail(`duplicate clause/chunk at printed page ${pageText}: ${segment.article || title}`);
+      duplicateKeys.add(key);
+      emitted.push(chunkContent);
+      chunks.push({ handbookVersion: config.version, section, title, article: segment.article, pageText, content: chunkContent, keywords: buildKeywords(chunkContent, title, section, segment.article), sort, createdAt: new Date().toISOString() });
     });
-
-    if (compactText(emittedContents.join("\n")) !== compactText(content)) {
-      throw new Error(`Page ${pageText} chunk integrity check failed`);
-    }
+    if (compactText(emitted.join("\n")) !== compactText(content)) fail(`printed page ${pageText}: chunk reconstruction differs from extracted body`);
   });
+  if (!chunks.length || chunks.some((chunk) => chunk.handbookVersion !== config.version)) fail("chunk/version consistency check failed");
 
-  const version = [{
-    version: handbookVersion,
-    name: handbookName,
-    active: true,
-    sourceFileName,
-    chunkCount: chunks.length,
-    importedAt: new Date(),
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  }];
-
-  fs.writeFileSync(chunksImportPath, `${chunks.map((chunk) => JSON.stringify(chunk)).join("\n")}\n`, "utf8");
-  fs.writeFileSync(versionImportPath, `${version.map((item) => JSON.stringify(item)).join("\n")}\n`, "utf8");
+  const now = new Date().toISOString();
+  const versions = fs.readdirSync(configDir).filter((name) => /^\d{4}\.json$/.test(name)).map((name) => JSON.parse(fs.readFileSync(path.join(configDir, name), "utf8"))).sort((a, b) => a.version.localeCompare(b.version)).map((item) => ({ version: item.version, name: item.name, active: item.version === config.version, sourceFileName: item.sourceFileName, chunkCount: item.version === config.version ? chunks.length : item.chunkCount, importedAt: now, createdAt: now, updatedAt: now }));
+  if (versions.filter((item) => item.active).length !== 1 || versions.find((item) => item.version === config.version).chunkCount !== chunks.length) fail("version/chunkCount consistency check failed");
+  const chunksPath = path.join(dataDir, `handbook_chunks_${config.version}_import.json`);
+  const versionsPath = path.join(dataDir, `handbook_versions_${config.version}_import.json`);
+  fs.writeFileSync(chunksPath, `${chunks.map((chunk) => JSON.stringify(chunk)).join("\n")}\n`, "utf8");
+  fs.writeFileSync(versionsPath, `${versions.map((item) => JSON.stringify(item)).join("\n")}\n`, "utf8");
+  console.log(`Built ${chunks.length} chunks for handbook ${config.version}.`);
+  console.log(`Validated ${pages.length - config.pdfPageOffset} printed pages and ${config.titleRules.length} title rules.`);
 };
 
 main();
