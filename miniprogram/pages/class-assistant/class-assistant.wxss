@@ -19,7 +19,7 @@ page {
 }
 
 .assistant-head {
-  padding: 4rpx 4rpx 20rpx;
+  padding: 4rpx 4rpx 12rpx;
 }
 
 .assistant-title-row {
@@ -50,20 +50,8 @@ page {
   opacity: 0.72;
 }
 
-.assistant-hint {
-  margin-top: 12rpx;
-  padding: 14rpx 16rpx;
-  border-radius: 12rpx;
-  background: #eef3f9;
-  color: #7b8494;
-  font-size: 23rpx;
-  line-height: 1.55;
-  white-space: normal;
-  word-break: break-word;
-}
-
 .message-list {
-  margin-top: 24rpx;
+  margin-top: 16rpx;
   display: flex;
   flex-direction: column;
   gap: 18rpx;

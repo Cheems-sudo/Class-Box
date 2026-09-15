@@ -22,7 +22,6 @@
           <view class="assistant-subtitle">基于《学生手册》回答</view>
           <view class="identity-switch" wx:if="{{isGuest}}" bindtap="switchIdentity">切换身份</view>
         </view>
-        <view class="assistant-hint">回答不理想？可尝试输入名词全称，例如“综测 → 综合测评”。</view>
       </view>
 
       <view class="message-list">
