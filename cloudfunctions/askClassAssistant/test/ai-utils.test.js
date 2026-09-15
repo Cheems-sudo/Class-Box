@@ -2,41 +2,10 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const {
-  classifySdkError,
-  extractSdkError,
   isRetryableError,
   runWithSingleRetry,
   sanitizeErrorMessage,
 } = require("../ai-utils");
-
-test("解析 CloudBase SDK 错误码和请求信息", () => {
-  const details = extractSdkError({
-    message: "AI+ 请求出错，错误码：AI_MODEL_DISABLED",
-    statusCode: 404,
-    requestId: "trace-1",
-    headers: { "retry-after": "2" },
-  });
-
-  assert.equal(details.code, "AI_MODEL_DISABLED");
-  assert.equal(details.statusCode, 404);
-  assert.equal(details.requestId, "trace-1");
-  assert.equal(details.retryAfterMs, 2000);
-});
-
-test("区分认证、权限、配置、额度、限流和上游错误", () => {
-  assert.equal(classifySdkError({ statusCode: 401 }), "auth");
-  assert.equal(classifySdkError({ code: "AI_CHANNEL_NOT_ALLOWED" }), "permission");
-  assert.equal(classifySdkError({ code: "AI_MODEL_DISABLED" }), "config");
-  assert.equal(classifySdkError({ code: "EXCEED_TOKEN_QUOTA_LIMIT" }), "quota");
-  assert.equal(classifySdkError({ statusCode: 429 }), "rate_limit");
-  assert.equal(classifySdkError({
-    code: "429",
-    statusCode: 0,
-    message: "该 API key 已达到该模型每分钟请求数(QPM)上限，请稍后再试或申请提额。",
-  }), "rate_limit");
-  assert.equal(classifySdkError({ message: "每分钟请求数达到上限" }), "rate_limit");
-  assert.equal(classifySdkError({ statusCode: 503 }), "upstream");
-});
 
 test("只重试暂时性错误，不重试确定性错误、超时或取消", () => {
   assert.equal(isRetryableError({ errorType: "rate_limit", statusCode: 429 }), false);

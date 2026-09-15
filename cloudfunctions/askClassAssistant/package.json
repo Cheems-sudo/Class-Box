@@ -9,7 +9,6 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "ws": "^8.21.0",
     "wx-server-sdk": "3.0.4"
   }
 }

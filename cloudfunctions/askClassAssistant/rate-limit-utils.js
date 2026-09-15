@@ -1,11 +1,4 @@
-// 模型级限流工具：每次真正调用模型前，在事务中消费一个全局 QPM 名额。
-const defaultGlobalQpmLimit = 5;
-
-const getGlobalQpmLimit = (value) => {
-  const parsed = Number(value);
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : defaultGlobalQpmLimit;
-};
-
+// 用户级限流工具：按分钟和自然日窗口在事务中消费个人业务额度。
 const isRateLimitReached = (count, limit) => (Number(count) || 0) >= limit;
 
 const getMinuteWindow = (nowMs = Date.now()) => {
@@ -38,81 +31,6 @@ const buildRateLimitKey = (action, subject, bucketKey) => {
   return `${action}_${safeSubject}_${bucketKey}`;
 };
 
-const consumeGlobalModelQuota = async ({
-  db,
-  counter,
-  limit,
-  readCounter,
-  writeCounter,
-}) => db.runTransaction(async (transaction) => {
-  const current = await readCounter(transaction, counter);
-  const count = Number(current && current.count) || 0;
-
-  if (isRateLimitReached(count, limit)) {
-    return {
-      success: false,
-      message: "AI 服务繁忙，请稍后再试",
-      errorType: "rate_limit",
-      stage: "global_model_rate_limit",
-      rateLimitSource: "global_qpm",
-      rateLimitKey: counter.id,
-      rateLimitCurrent: count,
-      rateLimitLimit: limit,
-      rateLimitWindow: counter.windowLabel || counter.bucketKey || "",
-    };
-  }
-
-  await writeCounter(transaction, counter, "__global_model__", current);
-  return { success: true };
-});
-
-const consumeInitialModelQuota = async ({
-  db,
-  counters,
-  limits,
-  readCounter,
-  writeCounter,
-}) => db.runTransaction(async (transaction) => {
-  const daily = await readCounter(transaction, counters.daily);
-  const minute = await readCounter(transaction, counters.minute);
-  const global = await readCounter(transaction, counters.global);
-
-  if (isRateLimitReached(Number(global && global.count) || 0, limits.global)) {
-    return {
-      success: false,
-      message: "AI 服务繁忙，请稍后再试",
-      errorType: "rate_limit",
-      stage: "global_model_rate_limit",
-      rateLimitSource: "global_qpm",
-      rateLimitKey: counters.global.id,
-      rateLimitCurrent: Number(global && global.count) || 0,
-      rateLimitLimit: limits.global,
-      rateLimitWindow: counters.global.windowLabel || counters.global.bucketKey || "",
-    };
-  }
-  if (isRateLimitReached(Number(daily && daily.count) || 0, limits.daily)) {
-    return {
-      success: false, message: "今日提问次数已用完，请明天再试。", errorType: "daily_limit",
-      rateLimitSource: "user_daily", rateLimitKey: counters.daily.id,
-      rateLimitCurrent: Number(daily && daily.count) || 0, rateLimitLimit: limits.daily,
-      rateLimitWindow: counters.daily.windowLabel || counters.daily.bucketKey || "",
-    };
-  }
-  if (isRateLimitReached(Number(minute && minute.count) || 0, limits.minute)) {
-    return {
-      success: false, message: "提问太频繁了，请稍后再试。", errorType: "minute_limit",
-      rateLimitSource: "user_minute", rateLimitKey: counters.minute.id,
-      rateLimitCurrent: Number(minute && minute.count) || 0, rateLimitLimit: limits.minute,
-      rateLimitWindow: counters.minute.windowLabel || counters.minute.bucketKey || "",
-    };
-  }
-
-  await writeCounter(transaction, counters.global, "__global_model__", global);
-  await writeCounter(transaction, counters.daily, counters.openid, daily);
-  await writeCounter(transaction, counters.minute, counters.openid, minute);
-  return { success: true };
-});
-
 const consumeUserQuota = async ({ db, counters, limits, readCounter, writeCounter, bypass = false }) => {
   if (bypass) return { success: true, bypassed: true };
   return db.runTransaction(async (transaction) => {
@@ -141,11 +59,7 @@ const consumeUserQuota = async ({ db, counters, limits, readCounter, writeCounte
 };
 
 module.exports = {
-  consumeGlobalModelQuota,
-  consumeInitialModelQuota,
   consumeUserQuota,
-  defaultGlobalQpmLimit,
-  getGlobalQpmLimit,
   getMinuteWindow,
   buildRateLimitKey,
   isCounterNotFoundError,
