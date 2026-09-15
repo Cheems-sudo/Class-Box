@@ -4,7 +4,8 @@ const tcb = require("@cloudbase/node-sdk");
 const {
   classifySdkError,
   extractSdkError,
-  isRetryableError,
+  runWithSingleRetry,
+  sanitizeErrorMessage,
 } = require("./ai-utils");
 const { expandContinuationChunks, rankChunks } = require("./retrieval-utils");
 const { expandQuestionAliases, getSupplementalAnswer } = require("./supplemental-answers");
@@ -27,7 +28,7 @@ const maxAiResponseBytes = 1024 * 1024;
 const cancelPollIntervalMs = 1000;
 const handbookCacheTtlMs = 5 * 60 * 1000;
 const maxCandidateChunks = 3000;
-const maxMatchedChunks = 8;
+const maxMatchedChunks = 5;
 const requestIdPattern = /^[a-zA-Z0-9_-]{12,80}$/;
 let handbookChunkCache = null;
 const noMatchAnswer = "学生手册中未找到明确规定。";
@@ -49,12 +50,13 @@ const getErrorCode = (value) => Number(value && (value.errCode !== undefined ? v
 
 const logSafeError = (action, error, extra = {}) => {
   console.error(action, {
-    type: error && error.name ? error.name : "Error",
+    type: String(error && (error.sdkType || error.type || error.name) || "Error"),
     code: String(error && (error.code || error.gatewayCode || error.errCode || error.errcode) || ""),
     errorType: String(error && error.errorType || ""),
     statusCode: Number(error && error.statusCode) || 0,
-    sdkType: String(error && error.sdkType || ""),
     requestId: String(error && error.requestId || ""),
+    retryAfterMs: Number(error && error.retryAfterMs) || 0,
+    message: sanitizeErrorMessage(error && error.message),
     stage: String(error && error.stage || extra.stage || ""),
     latencyMs: Number(error && error.latencyMs || extra.latencyMs) || 0,
     model: String(extra.model || ""),
@@ -65,7 +67,7 @@ const logSafeError = (action, error, extra = {}) => {
 const getSafeEnv = (name) => String(process.env[name] || "").trim();
 
 const getAiConfig = () => {
-  const model = getSafeEnv("AI_MODEL") || "hy3-preview";
+  const model = getSafeEnv("AI_MODEL") || "hy3";
   return { model };
 };
 
@@ -555,15 +557,18 @@ const requestAiOnce = async (config, messages, options = {}) => {
     }
 
     const details = extractSdkError(error);
-    throw Object.assign(error instanceof Error ? error : new Error(details.message || "AI SDK request failed"), {
+    const normalizedError = Object.assign(error instanceof Error ? error : new Error(details.message || "AI SDK request failed"), {
       errorType: classifySdkError(details),
       code: details.code,
       statusCode: details.statusCode,
       sdkType: details.type,
       requestId: details.requestId,
+      retryAfterMs: details.retryAfterMs,
       stage: "sdk_stream",
       latencyMs: Date.now() - startedAt,
     });
+    logSafeError("askClassAssistant SDK request failed", normalizedError, { model: config.model, stage: "sdk_stream" });
+    throw normalizedError;
   } finally {
     if (reader) {
       if (!completed) {
@@ -577,9 +582,8 @@ const requestAiOnce = async (config, messages, options = {}) => {
 
 // 封装远端请求生命周期，统一处理超时、取消和服务端错误。
 const requestAi = async (config, messages, options = {}) => {
-  let lastError;
-
-  for (let attempt = 0; attempt < 2; attempt += 1) {
+  const retryDelayMs = 500;
+  return runWithSingleRetry(async () => {
     if (typeof options.shouldCancel === "function" && await options.shouldCancel()) {
       throw createAiError("AI request cancelled", { errorType: "cancelled", stage: "before_ai_request" });
     }
@@ -590,29 +594,18 @@ const requestAi = async (config, messages, options = {}) => {
       throw createAiError("request deadline exceeded", { errorType: "timeout", stage: "total_deadline" });
     }
 
-    try {
-      return await requestAiOnce(config, messages, {
-        ...options,
-        timeoutMs: Math.min(aiTimeoutMs, remainingMs),
-      });
-    } catch (error) {
-      lastError = error;
-
-      if (attempt > 0 || !isRetryableError(error)) {
-        throw error;
-      }
-
-      const delayMs = 150 + Math.floor(Math.random() * 250);
-
-      if (Date.now() + delayMs >= Number(options.deadlineAt)) {
-        throw error;
-      }
-
-      await wait(delayMs);
-    }
-  }
-
-  throw lastError;
+    return requestAiOnce(config, messages, {
+      ...options,
+      timeoutMs: Math.min(aiTimeoutMs, remainingMs),
+    });
+  }, {
+    delayMs: retryDelayMs,
+    getDelayMs: (error) => Number(error && error.retryAfterMs) || retryDelayMs,
+    sleep: wait,
+    beforeRetry: async (error, delayMs) => {
+      if (Date.now() + delayMs >= Number(options.deadlineAt)) throw error;
+    },
+  });
 };
 
 const getAiErrorMessage = (errorType) => {
@@ -661,7 +654,7 @@ exports.main = async (event = {}) => {
   let userType = null;
   let handbookVersion = "";
   let matchedChunkIds = [];
-  let model = getSafeEnv("AI_MODEL") || "hy3-preview";
+  let model = getSafeEnv("AI_MODEL") || "hy3";
   let requestRegistered = false;
   let requestStatus = "failed";
   let traceId = "";

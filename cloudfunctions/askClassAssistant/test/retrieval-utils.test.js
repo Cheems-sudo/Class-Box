@@ -1,11 +1,18 @@
 // 测试说明：验证 retrieval-utils.test 模块的关键行为与边界条件。
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { expandContinuationChunks, rankChunks, tokenize } = require("../retrieval-utils");
+const {
+  expandContinuationChunks,
+  minScore,
+  rankChunks,
+  relativeScoreRatio,
+  scoreChunk,
+  tokenize,
+} = require("../retrieval-utils");
 
-test("中文问题会生成连续词和二元词", () => {
+test("中文问题会移除低信息问句词并生成概念词和二元词", () => {
   const tokens = tokenize("学生请假流程");
-  assert.equal(tokens.includes("学生请假流程"), true);
+  assert.equal(tokens.includes("学生"), false);
   assert.equal(tokens.includes("请假"), true);
   assert.equal(tokens.includes("流程"), true);
 });
@@ -56,6 +63,18 @@ test("连续跨越多个切片时一直补齐到完整句", () => {
   );
 });
 
+test("候选上限不会截断已命中的跨切片条款", () => {
+  const chunks = [
+    { _id: "hit", sort: 100, title: "请假办法", content: "请假手续包括：" },
+    { _id: "continued", sort: 200, title: "请假办法", content: "提交申请并获得批准。" },
+    { _id: "other", sort: 300, title: "其他办法", content: "其他内容。" },
+  ];
+  assert.deepEqual(
+    expandContinuationChunks(chunks, [chunks[0], chunks[2]], 1).map((item) => item._id),
+    ["hit", "continued"],
+  );
+});
+
 test("章节标题和页脚不被误判为跨页续文", () => {
   const chunks = [
     { _id: "chapter", sort: 100, title: "规定", content: "本条内容完整。\n第五章 课程管理" },
@@ -65,4 +84,64 @@ test("章节标题和页脚不被误判为跨页续文", () => {
 
   assert.deepEqual(expandContinuationChunks(chunks, [chunks[0]], 5).map((item) => item._id), ["chapter"]);
   assert.deepEqual(expandContinuationChunks(chunks, [chunks[1]], 5).map((item) => item._id), ["footer"]);
+});
+
+test("未完标点后若下一 chunk 明确开始新条款则不串接", () => {
+  const chunks = [
+    { _id: "old", sort: 100, title: "处分规定", article: "第二十三条", content: "第二十三条 前款所列行为：" },
+    { _id: "new", sort: 101, title: "处分规定", article: "第二十四条", content: "第二十四条 有下列行为之一的，给予处分。" },
+  ];
+  assert.deepEqual(expandContinuationChunks(chunks, [chunks[0]], 5).map((item) => item._id), ["old"]);
+});
+
+test("解析出的 article 引用不是新条款起始时仍可补全续文", () => {
+  const chunks = [
+    { _id: "start", sort: 100, title: "奖励办法", article: "第八条", content: "第八条 除本办法" },
+    { _id: "continued", sort: 101, title: "奖励办法", article: "第七条", content: "第七条规定的情形外，均按有关办法执行奖励。" },
+  ];
+  assert.deepEqual(expandContinuationChunks(chunks, [chunks[0]], 5).map((item) => item._id), ["start", "continued"]);
+});
+
+const retrievalCases = [
+  {
+    question: "评奖评优是否和体测成绩挂钩？",
+    expected: "学籍管理",
+    relevant: "学生评奖评优与体测成绩有关联的，按学校评奖评优相关管理文件执行。",
+    distractor: "学生住宿表现与评奖评优挂钩。",
+  },
+  { question: "学生请假需要什么手续？", expected: "考勤与请假", relevant: "请假手续须由本人提出申请并获得批准。", distractor: "学生应参加教学活动。" },
+  { question: "国家奖学金申请条件是什么？", expected: "国家奖助学金", relevant: "国家奖学金申请条件包括学习成绩与综合表现。", distractor: "学校设置多种奖励。" },
+  { question: "第二课堂成绩单有什么要求？", expected: "第二课堂成绩单", relevant: "第二课堂成绩单要求本科生修满规定学分。", distractor: "课堂教学应遵守纪律。" },
+  { question: "学生竞赛分类评价及奖励办法是什么？", expected: "竞赛分类评价及奖励", relevant: "竞赛分类评价及奖励办法规定竞赛分类与奖励标准。", distractor: "学生奖励坚持公开原则。" },
+  { question: "学生宿舍有哪些管理规定？", expected: "住宿管理", relevant: "学生宿舍住宿管理包括安全、卫生和作息要求。", distractor: "违反规定可给予处理。" },
+  { question: "旷课会受到什么处理？", expected: "考勤与请假", relevant: "学生旷课达到规定学时将按考勤与请假办法处理。", distractor: "伤害事故应及时处理。" },
+];
+
+test("七类真实问法均优先保留对应制度并过滤弱相关制度", () => {
+  retrievalCases.forEach(({ question, expected, relevant, distractor }, index) => {
+    const chunks = [
+      { _id: `relevant-${index}`, sort: 100, title: `佛山大学学生${expected}管理办法`, keywords: [expected], content: relevant },
+      { _id: `distractor-${index}`, sort: 200, title: "其他学生管理规定", keywords: ["学生", "管理", "规定"], content: distractor },
+      { _id: `generic-${index}`, sort: 300, title: "通用规定", content: "学生成绩及相关情况按学校规定管理。" },
+    ];
+    const result = rankChunks(chunks, question, 5);
+    assert.ok(result.length > 0, question);
+    assert.equal(result[0]._id, `relevant-${index}`, question);
+    assert.equal(result.some((chunk) => chunk._id === `generic-${index}`), false, question);
+  });
+});
+
+test("绝对阈值和相对最高分阈值会过滤弱候选", () => {
+  const question = "请假手续";
+  const tokens = tokenize(question);
+  const chunks = [
+    { _id: "best", sort: 1, title: "请假手续", keywords: ["请假手续"], content: "请假手续说明。" },
+    { _id: "weak", sort: 2, content: "请假后办理手续。" },
+    { _id: "noise", sort: 3, content: "手续。" },
+  ];
+  const bestScore = scoreChunk(chunks[0], tokens, question);
+  const weakScore = scoreChunk(chunks[1], tokens, question);
+  assert.ok(bestScore >= minScore);
+  assert.ok(weakScore < bestScore * relativeScoreRatio);
+  assert.deepEqual(rankChunks(chunks, question, 5).map((chunk) => chunk._id), ["best"]);
 });
