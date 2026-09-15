@@ -57,7 +57,12 @@ const cases = [
   },
   {
     question: "第二课堂成绩单有什么要求？",
-    verify(chunks) { assert.ok(chunks.every((chunk) => chunk.title.includes("第二课堂成绩单"))); },
+    verify(chunks) {
+      assert.ok(chunks.every((chunk) => chunk.title.includes("第二课堂成绩单")));
+      assert.ok(chunks.some((chunk) => chunk.article === "第五条"));
+      assert.ok(chunks.some((chunk) => chunk.article === "第七条"));
+      assert.equal(chunks.some((chunk) => chunk.article === "第三条"), false);
+    },
   },
   {
     question: "学生参加竞赛有哪些分类和奖励规定？",

@@ -9,7 +9,6 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@cloudbase/node-sdk": "^3.18.3",
     "ws": "^8.21.0",
     "wx-server-sdk": "3.0.4"
   }

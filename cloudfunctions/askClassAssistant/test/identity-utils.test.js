@@ -2,6 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const {
   getAssistantDailyLimit,
+  getAssistantMinuteLimit,
   isRequestOwnedByOther,
   resolveAssistantIdentity,
 } = require("../identity-utils");
@@ -43,10 +44,12 @@ test("member 与 guest 重复时优先最高权限 member", () => {
   assert.equal(identity.actor.role, "superAdmin");
 });
 
-test("guest 与普通 member 使用 20/day，superAdmin 保持 50/day", () => {
-  assert.equal(getAssistantDailyLimit("guest"), 20);
-  assert.equal(getAssistantDailyLimit("user"), 20);
-  assert.equal(getAssistantDailyLimit("admin"), 20);
+test("普通用户为 3/min、20/day，superAdmin 为 10/min、50/day", () => {
+  ["guest", "user", "admin"].forEach((role) => {
+    assert.equal(getAssistantMinuteLimit(role), 3);
+    assert.equal(getAssistantDailyLimit(role), 20);
+  });
+  assert.equal(getAssistantMinuteLimit("superAdmin"), 10);
   assert.equal(getAssistantDailyLimit("superAdmin"), 50);
 });
 

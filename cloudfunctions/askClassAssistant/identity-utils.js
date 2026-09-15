@@ -49,6 +49,8 @@ const resolveAssistantIdentity = (users) => {
   };
 };
 
+const getAssistantMinuteLimit = (role) => normalizeAssistantRole(role) === "superAdmin" ? 10 : 3;
+
 const getAssistantDailyLimit = (role) => normalizeAssistantRole(role) === "superAdmin" ? 50 : 20;
 
 const isRequestOwnedByOther = (request, openid) => Boolean(
@@ -57,6 +59,7 @@ const isRequestOwnedByOther = (request, openid) => Boolean(
 
 module.exports = {
   getAssistantDailyLimit,
+  getAssistantMinuteLimit,
   isRequestOwnedByOther,
   normalizeAssistantRole,
   resolveAssistantIdentity,

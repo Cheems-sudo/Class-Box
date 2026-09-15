@@ -9,15 +9,30 @@ const minScore = 16;
 const relativeScoreRatio = 0.8;
 const documentScoreRatio = 0.55;
 const conceptSupplementLimit = 2;
+const retrievalVersion = "rag-keyword-v3";
 
 const normalize = (text) => String(text || "").toLowerCase().replace(/\s+/g, "");
 
 const getConceptRuns = (text) => normalize(text)
   .replace(/[？?，,。！!；;：:]/g, "|")
-  .replace(/是否|有没有|是什么|有什么|有何|哪些|什么|怎么|如何|需要|要求|学生|相关|情况/g, "|")
-  .replace(/[有的和与及吗呢会]/g, "|")
+  .replace(/是否|有没有|能不能|要不要|是什么|有哪些|有什么|有何|会受到|哪些|什么|怎么|如何|需要|要求|相关情况/g, "|")
+  .replace(/学生(?!会)/g, "|")
+  .replace(/和|与|及/g, "|")
+  .replace(/[吗呢]$/g, "|")
   .split("|")
+  .map((part) => part.replace(/(?:管理规定|规定|办法)$/, ""))
   .filter((part) => part.length >= 2 && !stopWords.has(part));
+
+const ambiguousConcepts = new Set(["这个", "那个", "这项", "那项", "此项", "这样", "那样"]);
+const getConceptVariants = (concept) => {
+  if (concept === "奖励") return ["奖励", "获奖", "奖金"];
+  return [concept];
+};
+
+const isUnderspecifiedQuestion = (question) => {
+  const concepts = getConceptRuns(question);
+  return !concepts.length || concepts.every((concept) => ambiguousConcepts.has(concept));
+};
 
 const tokenize = (text) => {
   const runs = getConceptRuns(text).flatMap((part) => part.match(/[\u4e00-\u9fa5]{2,}|[a-z0-9]{2,}/g) || []);
@@ -38,13 +53,29 @@ const tokenize = (text) => {
 const getQuestionPhrases = (question) => getConceptRuns(question)
   .filter((phrase) => !lowInformationPhrases.has(phrase));
 
+const getQuestionIntentProfile = (question) => {
+  const source = normalize(question);
+  const asksForStudentAction = /要求|条件|怎么办|怎么|如何|需要|手续|流程|资格|标准|期限|什么时候/.test(source);
+  const asksForOrganization = /谁负责|哪个部门|什么部门|管理机构|组织机构|领导小组|工作组|职责分工/.test(source);
+  return { asksForStudentAction, asksForOrganization };
+};
+
 const getConceptTokens = (concept) => tokenize(concept)
   .filter((token) => token.length > 2 || !lowInformationPhrases.has(token));
 
+const conceptIsCovered = (text, concept) => {
+  const source = normalize(text);
+  if (getConceptVariants(concept).some((variant) => source.includes(variant))) return true;
+  const tokens = getConceptTokens(concept).filter((token) => token.length === 2);
+  if (tokens.length < 2) return false;
+  const matched = tokens.filter((token) => source.includes(token)).length;
+  return matched >= 2 && matched / tokens.length >= 0.6;
+};
+
 const getTextCoveredConcepts = (text, concepts) => {
   const source = normalize(text);
-  return concepts.filter((concept) => source.includes(concept)
-    || getConceptTokens(concept).some((token) => source.includes(token)));
+  return concepts.filter((concept) => conceptIsCovered(source, concept)
+    || getConceptTokens(concept).some((token) => token.length >= 2 && source.includes(token)));
 };
 
 const getCoveredConcepts = (chunk, concepts) => {
@@ -57,11 +88,7 @@ const getCoveredConcepts = (chunk, concepts) => {
     })
     .join(" ");
   const source = normalize(`${chunk.article || ""} ${keywordText} ${chunk.content || ""}`);
-  return concepts.filter((concept) => {
-    if (source.includes(concept)) return true;
-    const tokens = getConceptTokens(concept);
-    return tokens.some((token) => source.includes(token));
-  });
+  return concepts.filter((concept) => conceptIsCovered(source, concept));
 };
 
 const scoreTitle = (title, tokens, concepts) => {
@@ -76,7 +103,7 @@ const scoreTitle = (title, tokens, concepts) => {
   return score;
 };
 
-const scoreChunkContent = (chunk, tokens, concepts) => {
+const scoreChunkContent = (chunk, tokens, concepts, question = "") => {
   const article = normalize(chunk.article);
   const section = normalize(chunk.section);
   const normalizedTitle = normalize(chunk.title);
@@ -91,8 +118,9 @@ const scoreChunkContent = (chunk, tokens, concepts) => {
   const matchedTokens = new Set();
 
   concepts.forEach((concept) => {
-    if (keywords.includes(concept)) score += 28;
-    if (content.includes(concept)) score += 24;
+    const variants = getConceptVariants(concept);
+    if (variants.some((variant) => keywords.includes(variant))) score += 28;
+    if (variants.some((variant) => content.includes(variant))) score += 24;
   });
   tokens.forEach((token) => {
     let matched = false;
@@ -106,6 +134,15 @@ const scoreChunkContent = (chunk, tokens, concepts) => {
     if (matched) matchedTokens.add(token);
   });
   if (matchedTokens.size >= 2) score += matchedTokens.size * 5;
+  const intent = getQuestionIntentProfile(question);
+  if (intent.asksForStudentAction && !intent.asksForOrganization) {
+    const actionSignals = ["申请", "条件", "要求", "应当", "必须", "须", "学分", "资格", "期限", "时间", "完成", "办理", "认定", "标准", "处分", "后果"];
+    const actionMatches = actionSignals.filter((signal) => content.includes(signal)).length;
+    score += Math.min(actionMatches * 6, 36);
+    if (/领导小组|组织机构|工作组|工作职责|职责分工|负责制度的制定|统筹规划/.test(content)) {
+      score -= 40;
+    }
+  }
   // Structural wrappers and repeal/effective-date clauses are useful context,
   // but should not crowd out substantive conditions, procedures or sanctions.
   if (!article && /第[一二三四五六七八九十百零〇0-9]+[章节编部分]|总则|附则/.test(content)) score *= 0.55;
@@ -182,9 +219,13 @@ const startsNewArticle = (current, next) => {
 };
 
 const rankChunks = (chunks, question, limit) => {
+  if (isUnderspecifiedQuestion(question)) return [];
   const tokens = tokenize(question);
   const concepts = getQuestionPhrases(question);
-  const sourceChunks = Array.isArray(chunks) ? chunks : [];
+  const asksForGraduate = /研究生|硕士|博士/.test(String(question || ""));
+  const sourceChunks = (Array.isArray(chunks) ? chunks : []).filter((chunk) =>
+    asksForGraduate || (!/研究生/.test(String(chunk.title || ""))
+      && !/(?:^|\n)\s*第[一二三四五六七八九十百零〇0-9]+条\s*全日制研究生|研究生作为/.test(String(chunk.content || ""))));
   const ordered = [...sourceChunks].sort((a, b) => (Number(a.sort) || 0) - (Number(b.sort) || 0));
   const orderedIndexes = new Map(ordered.map((chunk, index) => [chunk, index]));
   const withContinuationPreview = (chunk) => {
@@ -210,7 +251,7 @@ const rankChunks = (chunks, question, limit) => {
     // Production chunks always contain body metadata. Keep a deterministic
     // title-only fallback for diagnostics/legacy fixtures without allowing a
     // document title to inflate every real chunk in that document.
-    contentScore: scoreChunkContent(scoringChunk, tokens, concepts)
+    contentScore: scoreChunkContent(scoringChunk, tokens, concepts, question)
       || (!chunk.content && !chunk.article && !chunk.section && !chunk.keywords
         ? Math.min(scoreTitle(chunk.title, tokens, concepts), minScore)
         : 0),
@@ -321,7 +362,15 @@ const rankChunks = (chunks, question, limit) => {
     best.candidate.coveredConcepts.forEach((concept) => covered.add(concept));
   }
 
-  return selected.map((item) => item.chunk);
+  return selected.map((item) => ({
+    ...item.chunk,
+    retrievalMeta: {
+      score: Number(item.score.toFixed(2)),
+      contentScore: Number(item.contentScore.toFixed(2)),
+      coveredConcepts: item.coveredConcepts,
+      continuation: false,
+    },
+  }));
 };
 
 const endsWithContinuation = (content) => {
@@ -343,16 +392,24 @@ const expandContinuationChunks = (allChunks, rankedChunks, limit) => {
     || String(a._id || "").localeCompare(String(b._id || "")));
   const result = [];
   const seen = new Set();
+  let primaryCount = 0;
   const getKey = (chunk) => String(chunk._id || `${chunk.sort}|${chunk.pageText}|${chunk.content}`);
   const append = (chunk, continuation = false) => {
     const key = getKey(chunk);
-    if (!chunk || seen.has(key) || (!continuation && result.length >= limit)) return;
+    if (!chunk || seen.has(key) || (!continuation && primaryCount >= limit)) return;
     seen.add(key);
-    result.push(chunk);
+    if (!continuation) primaryCount += 1;
+    result.push({
+      ...chunk,
+      retrievalMeta: {
+        ...(chunk.retrievalMeta || {}),
+        continuation,
+      },
+    });
   };
 
   (Array.isArray(rankedChunks) ? rankedChunks : []).forEach((chunk) => {
-    if (result.length >= limit) return;
+    if (primaryCount >= limit) return;
     append(chunk);
 
     let current = chunk;
@@ -381,7 +438,10 @@ module.exports = {
   tokenize,
   getCoveredConcepts,
   getQuestionPhrases,
+  getQuestionIntentProfile,
+  isUnderspecifiedQuestion,
   minScore,
   relativeScoreRatio,
   documentScoreRatio,
+  retrievalVersion,
 };

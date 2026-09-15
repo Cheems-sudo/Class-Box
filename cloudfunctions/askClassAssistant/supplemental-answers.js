@@ -10,7 +10,12 @@ const gpaAnswer = `补充说明：以下绩点计算内容不属于《学生手�
 绩点计算按照学校规定的课程范围执行，必修课、限选课等参与计算，公共选修课等不参与计算。平均学分绩点反映计入课程的综合学习表现，不是百分制成绩的简单平均值。`;
 
 const expandQuestionAliases = (question) => String(question || "")
-  .replace(/综测/g, "综合测评");
+  .replace(/综测/g, "综合测评")
+  .replace(/体测/g, "体质健康测试")
+  .replace(/宿舍/g, "住宿")
+  .replace(/助学贷款/g, "学生资助 助学贷款")
+  .replace(/比赛/g, "竞赛")
+  .replace(/有钱吗/g, "有哪些奖励");
 
 const getSupplementalAnswer = (question) => {
   const text = String(question || "").trim();

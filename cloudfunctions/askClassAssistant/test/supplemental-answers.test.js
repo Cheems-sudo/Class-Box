@@ -7,6 +7,13 @@ test("综测会展开为学生手册使用的正式名称", () => {
   assert.equal(expandQuestionAliases("综测怎么算"), "综合测评怎么算");
 });
 
+test("本科常见口语会归一化为手册正式用语", () => {
+  assert.equal(expandQuestionAliases("要不要体测"), "要不要体质健康测试");
+  assert.equal(expandQuestionAliases("宿舍能用电器吗"), "住宿能用电器吗");
+  assert.equal(expandQuestionAliases("比赛有钱吗"), "竞赛有哪些奖励");
+  assert.equal(expandQuestionAliases("助学贷款怎么办"), "学生资助 助学贷款怎么办");
+});
+
 test("绩点和 GPA 返回非手册补充说明", () => {
   const byChinese = getSupplementalAnswer("绩点怎么算");
   const byEnglish = getSupplementalAnswer("GPA");

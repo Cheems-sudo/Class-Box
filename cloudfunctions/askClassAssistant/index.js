@@ -1,16 +1,20 @@
 // 云函数说明：封装 index 相关的服务端校验与数据处理流程。
 const cloud = require("wx-server-sdk");
-const tcb = require("@cloudbase/node-sdk");
-const {
-  classifySdkError,
-  extractSdkError,
-  runWithSingleRetry,
-  sanitizeErrorMessage,
-} = require("./ai-utils");
-const { expandContinuationChunks, rankChunks } = require("./retrieval-utils");
+const crypto = require("node:crypto");
+const { runWithSingleRetry, sanitizeErrorMessage } = require("./ai-utils");
+const { expandContinuationChunks, rankChunks, retrievalVersion } = require("./retrieval-utils");
+const { parseModelAnswer } = require("./citation-utils");
 const { expandQuestionAliases, getSupplementalAnswer } = require("./supplemental-answers");
+const { requestDeepSeek } = require("./deepseek-client");
+const {
+  consumeUserQuota,
+  getMinuteWindow,
+  isCounterNotFoundError,
+  buildRateLimitKey,
+} = require("./rate-limit-utils");
 const {
   getAssistantDailyLimit,
+  getAssistantMinuteLimit,
   isRequestOwnedByOther,
   normalizeAssistantRole,
   resolveAssistantIdentity,
@@ -24,16 +28,13 @@ const db = cloud.database();
 const questionMaxLength = 300;
 const aiTimeoutMs = 45000;
 const totalTimeoutMs = 55000;
-const maxAiResponseBytes = 1024 * 1024;
-const cancelPollIntervalMs = 1000;
 const handbookCacheTtlMs = 5 * 60 * 1000;
 const maxCandidateChunks = 3000;
 const maxMatchedChunks = 5;
 const requestIdPattern = /^[a-zA-Z0-9_-]{12,80}$/;
 let handbookChunkCache = null;
 const noMatchAnswer = "学生手册中未找到明确规定。";
-const aiApp = tcb.init({ env: tcb.SYMBOL_CURRENT_ENV, timeout: aiTimeoutMs });
-const aiModel = aiApp.ai().createModel("cloudbase");
+const promptVersion = "handbook-grounded-v3";
 
 const fail = (message, errorType, details = {}) => ({
   success: false,
@@ -60,15 +61,16 @@ const logSafeError = (action, error, extra = {}) => {
     stage: String(error && error.stage || extra.stage || ""),
     latencyMs: Number(error && error.latencyMs || extra.latencyMs) || 0,
     model: String(extra.model || ""),
-    channel: "cloudbase-node-sdk",
+    channel: "deepseek-http",
   });
 };
 
 const getSafeEnv = (name) => String(process.env[name] || "").trim();
 
 const getAiConfig = () => {
-  const model = getSafeEnv("AI_MODEL") || "hy3";
-  return { model };
+  const apiKey = getSafeEnv("DEEPSEEK_API_KEY");
+  const model = getSafeEnv("DEEPSEEK_MODEL") || "deepseek-flash";
+  return { apiKey, model };
 };
 
 const getShanghaiDateKey = () => new Intl.DateTimeFormat("zh-CN", {
@@ -78,13 +80,13 @@ const getShanghaiDateKey = () => new Intl.DateTimeFormat("zh-CN", {
   day: "2-digit",
 }).format(new Date()).replace(/\D/g, "");
 
-const buildCounter = (openid, action, bucketKey, windowMs) => {
-  const safeOpenid = openid.replace(/[^a-zA-Z0-9_-]/g, "_");
-
+const buildCounter = (openid, action, bucketKey, windowMs, nowMs = Date.now(), windowLabel = "") => {
   return {
-    id: `${action}_${safeOpenid}_${bucketKey}`,
+    id: buildRateLimitKey(action, openid, bucketKey),
     action,
-    bucketStart: new Date(Math.floor(Date.now() / windowMs) * windowMs),
+    bucketKey,
+    windowLabel,
+    bucketStart: new Date(Math.floor(Number(nowMs) / windowMs) * windowMs),
     windowMs,
   };
 };
@@ -94,7 +96,8 @@ const readCounter = async (transaction, counter) => {
     const result = await transaction.collection("security_counters").doc(counter.id).get();
     return result.data || null;
   } catch (error) {
-    return null;
+    if (isCounterNotFoundError(error)) return null;
+    throw error;
   }
 };
 
@@ -124,31 +127,20 @@ const writeCounter = async (transaction, counter, openid, current) => {
   });
 };
 
-// 在事务中消费操作配额，防止并发请求绕过频率限制。
-const consumeRateLimit = async (openid, role) => {
+const consumeAssistantUserRateLimit = async (openid, role) => {
   const dailyLimit = getAssistantDailyLimit(role);
-  const dailyCounter = buildCounter(openid, "class_assistant_daily", getShanghaiDateKey(), 24 * 60 * 60 * 1000);
-  const minuteCounter = buildCounter(openid, "class_assistant_minute", String(Math.floor(Date.now() / (60 * 1000)) * 60 * 1000), 60 * 1000);
-
-  return db.runTransaction(async (transaction) => {
-    const daily = await readCounter(transaction, dailyCounter);
-    const dailyCount = Number(daily && daily.count) || 0;
-
-    if (dailyCount >= dailyLimit) {
-      return fail("今日提问次数已用完，请明天再试。", "daily_limit");
-    }
-
-    const minute = await readCounter(transaction, minuteCounter);
-    const minuteCount = Number(minute && minute.count) || 0;
-
-    if (minuteCount >= 3) {
-      return fail("提问太频繁了，请稍后再试。", "minute_limit");
-    }
-
-    await writeCounter(transaction, dailyCounter, openid, daily);
-    await writeCounter(transaction, minuteCounter, openid, minute);
-
-    return { success: true };
+  const minuteLimit = getAssistantMinuteLimit(role);
+  const nowMs = Date.now();
+  const minuteWindow = getMinuteWindow(nowMs);
+  const dailyKey = getShanghaiDateKey();
+  const dailyCounter = buildCounter(openid, "class_assistant_daily", dailyKey, 24 * 60 * 60 * 1000, nowMs, dailyKey);
+  const minuteCounter = buildCounter(openid, "class_assistant_minute", minuteWindow.bucketKey, minuteWindow.windowMs, nowMs, minuteWindow.label);
+  return consumeUserQuota({
+    db,
+    counters: { daily: dailyCounter, minute: minuteCounter, openid },
+    limits: { daily: dailyLimit, minute: minuteLimit },
+    readCounter,
+    writeCounter,
   });
 };
 
@@ -193,7 +185,7 @@ const checkText = async (content, openid) => {
 };
 
 // 记录审计或辅助数据；记录失败不应掩盖主业务结果。
-const writeUsageLog = async ({ openid, role, userType, handbookVersion, questionLength, matchedChunkIds, outcome, errorType, model, latencyMs, stageLatencies, traceId, aiInvoked, aiSucceeded }) => {
+const writeUsageLog = async ({ openid, role, userType, handbookVersion, handbookDataVersion, questionLength, matchedChunkIds, matchedChunkSummary, contextLength, noMatchSource, rateLimitSource, rateLimitKey, rateLimitCurrent, rateLimitLimit, rateLimitWindow, aiProvider, outcome, errorType, model, latencyMs, stageLatencies, traceId, aiInvoked, aiSucceeded }) => {
   if (!openid) {
     return;
   }
@@ -205,11 +197,23 @@ const writeUsageLog = async ({ openid, role, userType, handbookVersion, question
         role: normalizeRole(role),
         userType: userType === "guest" ? "guest" : (userType === "member" ? "member" : null),
         handbookVersion: String(handbookVersion || ""),
+        handbookDataVersion: String(handbookDataVersion || ""),
+        retrievalVersion,
+        promptVersion,
         questionLength: Number(questionLength) || 0,
         matchedChunkIds: Array.isArray(matchedChunkIds) ? matchedChunkIds : [],
+        matchedChunkSummary: Array.isArray(matchedChunkSummary) ? matchedChunkSummary.slice(0, 10) : [],
+        contextLength: Number(contextLength) || 0,
+        noMatchSource: String(noMatchSource || ""),
+        rateLimitSource: String(rateLimitSource || ""),
+        rateLimitKey: String(rateLimitKey || "").slice(0, 160),
+        rateLimitCurrent: Number(rateLimitCurrent) || 0,
+        rateLimitLimit: Number(rateLimitLimit) || 0,
+        rateLimitWindow: String(rateLimitWindow || "").slice(0, 32),
         outcome: String(outcome || "ai_failed"),
         errorType: String(errorType || ""),
         model: String(model || ""),
+        aiProvider: String(aiProvider || "deepseek"),
         latencyMs: Number(latencyMs) || 0,
         stageLatencies: stageLatencies && typeof stageLatencies === "object" ? stageLatencies : {},
         traceId: String(traceId || ""),
@@ -305,6 +309,9 @@ const fetchHandbookChunks = async (handbookVersion) => {
   handbookChunkCache = {
     handbookVersion,
     chunks,
+    dataHash: crypto.createHash("sha256").update(chunks.map((chunk) => [
+      chunk.sort, chunk.title, chunk.article, chunk.pageText, chunk.content,
+    ].join("|")).join("\n")).digest("hex"),
     expiresAt: Date.now() + handbookCacheTtlMs,
   };
 
@@ -424,50 +431,25 @@ const buildCitation = (chunks, handbookName) => {
   return `依据：\n${references.map((reference, index) => `${index + 1}. ${reference}`).join("\n")}`;
 };
 
-const stripModelCitation = (answer) => {
-  const text = String(answer || "").trim();
-  const citationIndex = text.indexOf("依据：");
-  return (citationIndex < 0 ? text : text.slice(0, citationIndex)).trim();
-};
-
-const parseModelAnswer = (answer, chunks) => {
-  const text = stripModelCitation(answer);
-  const markerIndex = text.search(/引用片段[：:]/);
-  const markerLine = markerIndex >= 0 ? text.slice(markerIndex).split(/\r?\n/, 1)[0] : "";
-  const body = (markerIndex >= 0 ? text.slice(0, markerIndex) : text).trim();
-  const indexes = markerLine
-    ? Array.from(new Set((markerLine.match(/\d+/g) || []).map(Number)
-      .filter((value) => value >= 1 && value <= chunks.length)))
-    : [];
-  const citedIndexes = indexes.length ? indexes : [1];
-  const citedChunks = [];
-
-  citedIndexes.forEach((value) => {
-    const chunk = chunks[value - 1];
-    if (!chunk) return;
-    citedChunks.push(chunk);
-
-    if (!/[。！？；]$/.test(String(chunk.content || "").trim()) && chunks[value]) {
-      citedChunks.push(chunks[value]);
-    }
-  });
-
-  return { body, citedChunks: Array.from(new Set(citedChunks)) };
-};
-
 const buildContext = (chunks, handbookName) => chunks.map((chunk, index) => {
   const reference = formatReference(chunk, handbookName);
 
   return `片段${index + 1}\n依据：${reference}\n正文：${String(chunk.content || "").slice(0, 1400)}`;
 }).join("\n\n");
 
-const buildSystemPrompt = (handbookName) => `你是班级助手，只能根据提供的《${handbookName}》片段回答学生关于校规、流程、请假、住宿、处分、档案等问题。
-不得编造没有依据的规定。
-找不到依据时只回答“学生手册中未找到明确规定。”
-回答正文后必须另起一行输出实际使用的片段编号，例如“引用片段：1,2”。只能填写确实支持回答的片段编号，不要输出“依据”、条款编号、页码或引用列表；系统会把片段编号转换成真实依据。
-问题只有名词或短语、含义不够明确时，应先回答最直接的定义、计算方式或办理规则，再概括其他主要相关规定；不能只摘取某一个包含该词的局部条件。条款跨片段时必须结合相邻续文完整回答，不得在逗号、冒号或未完句处截断。
-涉及处分、退学、开除、申诉、奖助资格、学籍异动等事项时，提示以学校相关部门最终解释为准。
-不替学校做最终决定，不给法律结论。`;
+const buildSystemPrompt = (handbookName) => `你是班级助手，只能根据提供的《${handbookName}》片段回答学生关于校规、流程、请假、住宿、处分、档案等问题，不得编造片段中没有依据的规定、条件、数字、流程或结论。
+
+只要片段已经能够直接支持问题的核心关系、条件、流程、标准或结果，就应据此回答，不得仅因片段引用了另一份管理文件、实施细则或相关规定，就判断为“未找到明确规定”。如果片段只能支持问题的一部分，应先回答已经明确的部分，并说明哪些具体细节在提供的片段中未说明；只有当现有片段无法支持问题的核心结论时，才只回答“学生手册中未找到明确规定。”
+
+回答时应先识别用户问题的核心意图，并优先使用与该意图最直接相关的片段组织答案。如果问题只有一个明确诉求，应围绕该诉求回答，不要被片段中附带出现的其他内容带偏；如果问题同时包含多个并列诉求，应尽量覆盖所有核心诉求，不得只回答其中一部分。若片段中同时存在核心规定和背景说明、组织架构、职责分工、解释条款、附则等次要信息，应优先回答能够直接解决用户问题的规定，次要信息仅在确有助于理解或办理时补充。
+
+回答内容的顺序应根据问题本身决定，优先呈现用户最需要知道的结论、条件、标准、步骤、结果、限制、例外或注意事项，而不是机械按照学生手册原文顺序罗列。条款跨片段时必须结合相邻续文完整理解，不得在逗号、冒号或未完句处截断，也不得把下一条、下一节或无关条款误当作续文。
+
+当问题只有名词、简称或短语，含义不够明确时，应先给出最直接的定义、计算方式、办理规则或核心要求，再简要补充最重要的相关规定，不要无差别罗列所有包含该词的内容。回答应直接、清晰，优先给结论，再给必要说明，不要重复问题，不要堆砌无关制度内容。
+
+回答正文后必须另起一行输出实际使用的片段编号，例如“引用片段：1,2”。只能填写确实支持回答的片段编号，不得填写未实际使用的片段；不要自行输出“依据”、条款编号、页码或引用列表，系统会把片段编号转换成真实依据。
+
+涉及处分、退学、开除、申诉、奖助资格、学籍异动等事项时，如果片段显示仍需学校审批、认定或另有文件执行，再提示以学校相关部门最终解释或办理结果为准。不替学校做最终决定，不给法律结论。`;
 
 const createAiError = (message, metadata = {}) => Object.assign(new Error(message), metadata);
 
@@ -476,107 +458,19 @@ const wait = (delayMs) => new Promise((resolve) => setTimeout(resolve, delayMs))
 // 封装远端请求生命周期，统一处理超时、取消和服务端错误。
 const requestAiOnce = async (config, messages, options = {}) => {
   const startedAt = Date.now();
-  let reader = null;
-  let dataCancelPromise = Promise.resolve();
-  let completed = false;
-
   try {
-    const result = await aiModel.streamText({
-      model: config.model,
-      messages,
-      temperature: 0.2,
-    }, {
-      timeout: Math.max(1000, Number(options.timeoutMs) || aiTimeoutMs),
+    return await requestDeepSeek(config, messages, {
+      timeoutMs: Math.max(1000, Number(options.timeoutMs) || aiTimeoutMs),
+      shouldCancel: options.shouldCancel,
     });
-
-    if (result.error) {
-      throw result.error;
-    }
-
-    if (!result.textStream || typeof result.textStream.getReader !== "function") {
-      throw createAiError("AI SDK text stream unavailable", { errorType: "format", stage: "sdk_stream" });
-    }
-
-    if (result.dataStream && typeof result.dataStream.cancel === "function") {
-      dataCancelPromise = result.dataStream.cancel("text stream only").catch(() => undefined);
-    }
-
-    reader = result.textStream.getReader();
-    let text = "";
-    let responseBytes = 0;
-    let pendingRead = reader.read();
-    let nextControlCheckAt = Date.now() + cancelPollIntervalMs;
-    const assertRequestActive = async () => {
-      if (typeof options.shouldCancel === "function" && await options.shouldCancel()) {
-        throw createAiError("AI request cancelled", { errorType: "cancelled", stage: "sdk_stream" });
-      }
-
-      if (Date.now() >= Number(options.deadlineAt)) {
-        throw createAiError("request deadline exceeded", { errorType: "timeout", stage: "total_deadline" });
-      }
-
-      nextControlCheckAt = Date.now() + cancelPollIntervalMs;
-    };
-
-    while (true) {
-      const event = await Promise.race([
-        pendingRead.then((value) => ({ type: "chunk", value })),
-        wait(cancelPollIntervalMs).then(() => ({ type: "poll" })),
-      ]);
-
-      if (event.type === "poll") {
-        await assertRequestActive();
-        continue;
-      }
-
-      if (event.value.done) {
-        completed = true;
-        break;
-      }
-
-      const chunk = String(event.value.value || "");
-      responseBytes += Buffer.byteLength(chunk);
-
-      if (responseBytes > maxAiResponseBytes) {
-        throw createAiError("AI response too large", { errorType: "format", stage: "sdk_stream" });
-      }
-
-      text += chunk;
-
-      if (Date.now() >= nextControlCheckAt) {
-        await assertRequestActive();
-      }
-
-      pendingRead = reader.read();
-    }
-
-    return { text, traceId: "" };
   } catch (error) {
-    if (error && error.errorType) {
-      throw Object.assign(error, { latencyMs: error.latencyMs || Date.now() - startedAt });
-    }
-
-    const details = extractSdkError(error);
-    const normalizedError = Object.assign(error instanceof Error ? error : new Error(details.message || "AI SDK request failed"), {
-      errorType: classifySdkError(details),
-      code: details.code,
-      statusCode: details.statusCode,
-      sdkType: details.type,
-      requestId: details.requestId,
-      retryAfterMs: details.retryAfterMs,
-      stage: "sdk_stream",
-      latencyMs: Date.now() - startedAt,
+    const normalizedError = Object.assign(error instanceof Error ? error : new Error("DeepSeek request failed"), {
+      errorType: error && error.errorType || "network",
+      stage: error && error.stage || "deepseek_request",
+      latencyMs: error && error.latencyMs || Date.now() - startedAt,
     });
-    logSafeError("askClassAssistant SDK request failed", normalizedError, { model: config.model, stage: "sdk_stream" });
+    logSafeError("askClassAssistant DeepSeek request failed", normalizedError, { model: config.model, stage: normalizedError.stage });
     throw normalizedError;
-  } finally {
-    if (reader) {
-      if (!completed) {
-        await reader.cancel("request finished").catch(() => undefined);
-      }
-      reader.releaseLock();
-    }
-    await dataCancelPromise;
   }
 };
 
@@ -593,6 +487,8 @@ const requestAi = async (config, messages, options = {}) => {
     if (remainingMs <= 1000) {
       throw createAiError("request deadline exceeded", { errorType: "timeout", stage: "total_deadline" });
     }
+
+    if (typeof options.onAttempt === "function") options.onAttempt();
 
     return requestAiOnce(config, messages, {
       ...options,
@@ -654,12 +550,17 @@ exports.main = async (event = {}) => {
   let userType = null;
   let handbookVersion = "";
   let matchedChunkIds = [];
-  let model = getSafeEnv("AI_MODEL") || "hy3";
+  let matchedChunkSummary = [];
+  let contextLength = 0;
+  let handbookDataVersion = "";
+  let model = getSafeEnv("DEEPSEEK_MODEL") || "deepseek-flash";
+  const aiProvider = "deepseek";
   let requestRegistered = false;
   let requestStatus = "failed";
   let traceId = "";
   let aiInvoked = false;
   let aiSucceeded = false;
+  let rateLimitDiagnostics = {};
   const stageLatencies = {};
   const runStage = async (name, callback) => {
     const stageStart = Date.now();
@@ -675,14 +576,19 @@ exports.main = async (event = {}) => {
     role: actor && actor.role || "user",
     userType,
     handbookVersion,
+    handbookDataVersion,
     questionLength: question.length,
     matchedChunkIds,
+    matchedChunkSummary,
+    contextLength,
     model,
+    aiProvider,
     latencyMs: Date.now() - startAt,
     stageLatencies,
     traceId,
     aiInvoked,
     aiSucceeded,
+    ...rateLimitDiagnostics,
     ...values,
   });
   const isCancelled = async () => {
@@ -779,7 +685,20 @@ exports.main = async (event = {}) => {
     const handbookName = activeVersion.name || `${handbookVersion}年学生手册`;
     const searchQuestion = expandQuestionAliases(question);
     const matchedChunks = await runStage("retrievalMs", () => searchChunks(searchQuestion, handbookVersion));
+    handbookDataVersion = handbookChunkCache
+      ? `${handbookVersion}:${handbookChunkCache.chunks.length}:${handbookChunkCache.dataHash}`
+      : handbookVersion;
     matchedChunkIds = matchedChunks.map((chunk) => chunk._id).filter(Boolean);
+    matchedChunkSummary = matchedChunks.map((chunk) => ({
+      title: String(chunk.title || chunk.section || "").slice(0, 80),
+      page: Number(chunk.pageText || chunk.page) || 0,
+      article: String(chunk.article || "").slice(0, 30),
+      score: Number(chunk.retrievalMeta && chunk.retrievalMeta.score) || 0,
+      coveredConcepts: Array.isArray(chunk.retrievalMeta && chunk.retrievalMeta.coveredConcepts)
+        ? chunk.retrievalMeta.coveredConcepts.slice(0, 6).map((item) => String(item).slice(0, 30))
+        : [],
+      continuation: Boolean(chunk.retrievalMeta && chunk.retrievalMeta.continuation),
+    }));
 
     if (!matchedChunks.length) {
       requestStatus = "no_match";
@@ -788,7 +707,7 @@ exports.main = async (event = {}) => {
         handbookVersion,
         source: "retrieval_no_match",
       });
-      await usage({ outcome: "no_match", errorType: "" });
+      await usage({ outcome: "no_match", errorType: "", noMatchSource: "retrieval_no_match" });
       return {
         success: true,
         outcome: "no_match",
@@ -800,38 +719,72 @@ exports.main = async (event = {}) => {
     const aiConfig = getAiConfig();
     model = aiConfig.model;
 
+    if (!aiConfig.apiKey) {
+      await usage({ outcome: "config_failed", errorType: "config" });
+      return fail("班级助手配置异常，请联系管理员", "config", { requestId });
+    }
+
     if (await isCancelled()) {
       requestStatus = "cancelled";
       await usage({ outcome: "ai_failed", errorType: "cancelled" });
       return fail("已停止回答", "cancelled", { requestId });
     }
 
-    const rateLimitResult = await runStage("rateLimitMs", () => consumeRateLimit(openid, actor.role));
+    let rateLimitResult;
+    try {
+      rateLimitResult = await runStage("rateLimitMs", () => consumeAssistantUserRateLimit(openid, actor.role));
+    } catch (error) {
+      rateLimitDiagnostics = {
+        rateLimitSource: "rate_limit_storage",
+        rateLimitWindow: getMinuteWindow().label,
+      };
+      logSafeError("askClassAssistant rate limit storage failed", error, { stage: "rate_limit_storage" });
+      await usage({ outcome: "rate_limited", errorType: "rate_limit" });
+      return fail("AI 服务繁忙，请稍后再试", "rate_limit", { requestId });
+    }
 
     if (!rateLimitResult.success) {
+      rateLimitDiagnostics = {
+        rateLimitSource: rateLimitResult.rateLimitSource,
+        rateLimitKey: rateLimitResult.rateLimitKey,
+        rateLimitCurrent: rateLimitResult.rateLimitCurrent,
+        rateLimitLimit: rateLimitResult.rateLimitLimit,
+        rateLimitWindow: rateLimitResult.rateLimitWindow,
+      };
       await usage({ outcome: "rate_limited", errorType: rateLimitResult.errorType });
       return rateLimitResult;
     }
 
     let aiResult;
+    const modelContext = buildContext(matchedChunks, handbookName);
+    contextLength = modelContext.length;
 
     try {
-      aiInvoked = true;
       aiResult = await runStage("aiMs", () => requestAi(aiConfig, [
         { role: "system", content: buildSystemPrompt(handbookName) },
-        { role: "user", content: `学生问题：${searchQuestion}\n\n可用学生手册片段：\n${buildContext(matchedChunks, handbookName)}` },
+        { role: "user", content: `学生问题：${searchQuestion}\n\n可用学生手册片段：\n${modelContext}` },
       ], {
         deadlineAt,
         shouldCancel: isCancelled,
+        onAttempt: () => { aiInvoked = true; },
       }));
       traceId = aiResult.traceId;
       aiSucceeded = true;
     } catch (error) {
       const errorType = error && error.errorType ? error.errorType : "network";
+      if (errorType === "rate_limit") {
+        rateLimitDiagnostics = {
+          rateLimitSource: error.rateLimitSource || (error.stage === "global_model_rate_limit" ? "global_qpm" : "upstream_model"),
+          rateLimitKey: error.rateLimitKey,
+          rateLimitCurrent: error.rateLimitCurrent,
+          rateLimitLimit: error.rateLimitLimit,
+          rateLimitWindow: error.rateLimitWindow || getMinuteWindow().label,
+        };
+      }
       traceId = String(error && error.requestId || "");
       requestStatus = errorType === "cancelled" ? "cancelled" : "failed";
       logSafeError("askClassAssistant request failed", error, { model, stage: "ai" });
-      await usage({ outcome: "ai_failed", errorType });
+      await usage({ outcome: errorType === "rate_limit" ? "rate_limited" : "ai_failed", errorType });
       return fail(getAiErrorMessage(errorType), errorType, { requestId, traceId });
     }
 
@@ -842,7 +795,7 @@ exports.main = async (event = {}) => {
       return fail("回答格式异常，请稍后再试", "format");
     }
 
-    const parsedAnswer = parseModelAnswer(modelAnswer, matchedChunks);
+    const parsedAnswer = parseModelAnswer(modelAnswer, matchedChunks, expandContinuationChunks);
 
     if (parsedAnswer.body === noMatchAnswer) {
       requestStatus = "no_match";
@@ -851,7 +804,7 @@ exports.main = async (event = {}) => {
         handbookVersion,
         source: "model_no_match",
       });
-      await usage({ outcome: "no_match", errorType: "" });
+      await usage({ outcome: "no_match", errorType: "", noMatchSource: "model_no_match" });
       return {
         success: true,
         outcome: "no_match",
@@ -863,7 +816,7 @@ exports.main = async (event = {}) => {
 
     const answerBody = parsedAnswer.body;
 
-    if (!answerBody) {
+    if (!answerBody || !parsedAnswer.citationValid) {
       await usage({ outcome: "ai_failed", errorType: "format" });
       return fail("回答格式异常，请稍后再试", "format", { requestId, traceId });
     }
