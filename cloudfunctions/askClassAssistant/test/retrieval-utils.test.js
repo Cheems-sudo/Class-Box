@@ -9,9 +9,37 @@ const {
   scoreChunk,
   tokenize,
   getCoveredConcepts,
+  getQuantitativeTokens,
+  getQuestionIntentProfile,
   getQuestionPhrases,
   isUnderspecifiedQuestion,
 } = require("../retrieval-utils");
+
+test("数值与单位同时保留完整 token、数值和单位", () => {
+  const cases = [
+    ["70分", ["70分", "70", "分"]],
+    ["7学分", ["7学分", "7", "学分"]],
+    ["500元", ["500元", "500", "元"]],
+    ["18.1元/小时", ["18.1元/小时", "18.1", "元/小时"]],
+    ["30%", ["30%", "30", "%"]],
+    ["15个工作日", ["15个工作日", "15", "个工作日"]],
+    ["一个月", ["一个月", "一", "个月"]],
+    ["20册", ["20册", "20", "册"]],
+    ["2次", ["2次", "2", "次"]],
+  ];
+  cases.forEach(([source, expected]) => {
+    const tokens = getQuantitativeTokens(source);
+    expected.forEach((token) => assert.ok(tokens.includes(token), `${source}: ${token}`));
+  });
+});
+
+test("量化、期限、处罚和例外意图相互独立", () => {
+  assert.equal(getQuestionIntentProfile("奖学金多少钱？").quantitativeIntent, true);
+  assert.equal(getQuestionIntentProfile("奖学金有什么要求？").quantitativeIntent, false);
+  assert.equal(getQuestionIntentProfile("最晚什么时候申请？").deadlineIntent, true);
+  assert.equal(getQuestionIntentProfile("账号外借会有什么处分？").sanctionIntent, true);
+  assert.equal(getQuestionIntentProfile("生病能缓考吗？").exceptionIntent, true);
+});
 
 test("中文问题会移除低信息问句词并生成概念词和二元词", () => {
   const tokens = tokenize("学生请假流程");

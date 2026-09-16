@@ -1,0 +1,806 @@
+{
+  "source": {
+    "handbookVersion": "2026",
+    "sourceChunkCount": 1724,
+    "auditQuestionCount": 76,
+    "goldCorrections": [
+      35,
+      36,
+      37,
+      73
+    ]
+  },
+  "cases": [
+    {
+      "id": 1,
+      "category": "数值条件",
+      "style": "自然",
+      "question": "拿奖学金体测要多少分？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        195005
+      ]
+    },
+    {
+      "id": 2,
+      "category": "数值条件",
+      "style": "正式",
+      "question": "评奖评优对体质健康测试成绩有何要求？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        195005
+      ]
+    },
+    {
+      "id": 3,
+      "category": "数值条件",
+      "style": "学生",
+      "question": "体测69还能拿奖学金吗？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        195005
+      ]
+    },
+    {
+      "id": 4,
+      "category": "数值条件",
+      "style": "正式",
+      "question": "2026-2027学年评奖体测最低几分？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        195005
+      ]
+    },
+    {
+      "id": 5,
+      "category": "金额奖励",
+      "style": "正式",
+      "question": "国家奖学金多少钱？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        198004
+      ]
+    },
+    {
+      "id": 6,
+      "category": "金额奖励",
+      "style": "学生",
+      "question": "国奖一年能拿多少元？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        198004
+      ]
+    },
+    {
+      "id": 7,
+      "category": "金额奖励",
+      "style": "正式",
+      "question": "国家励志奖学金奖励标准是多少？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        198004
+      ]
+    },
+    {
+      "id": 8,
+      "category": "金额奖励",
+      "style": "学生",
+      "question": "励志奖学金一年6000吗？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        198004
+      ]
+    },
+    {
+      "id": 9,
+      "category": "金额奖励",
+      "style": "自然",
+      "question": "国家助学金每年多少钱？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        198004
+      ]
+    },
+    {
+      "id": 10,
+      "category": "金额奖励",
+      "style": "学生",
+      "question": "助学金分几档，最低最高多少？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        198004
+      ]
+    },
+    {
+      "id": 11,
+      "category": "资格门槛",
+      "style": "正式",
+      "question": "家庭经济困难学生认定依据和条件是什么？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        246001,
+        247001,
+        247002,
+        248001
+      ]
+    },
+    {
+      "id": 12,
+      "category": "资格门槛",
+      "style": "自然",
+      "question": "家里什么情况能认定困难生？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        246001,
+        247001,
+        247002,
+        248001
+      ]
+    },
+    {
+      "id": 13,
+      "category": "流程完整",
+      "style": "自然",
+      "question": "困难生怎么申请认定，要公示几天？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        248003,
+        249000
+      ]
+    },
+    {
+      "id": 14,
+      "category": "时间期限",
+      "style": "自然",
+      "question": "新学年困难认定最晚多久办完？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        250002
+      ]
+    },
+    {
+      "id": 15,
+      "category": "金额奖励",
+      "style": "正式",
+      "question": "就业帮扶资助金额是多少？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        218001
+      ]
+    },
+    {
+      "id": 16,
+      "category": "金额奖励",
+      "style": "学生",
+      "question": "毕业找工作太困难，学校最多补助多少？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        218001
+      ]
+    },
+    {
+      "id": 17,
+      "category": "数值条件",
+      "style": "正式",
+      "question": "第二课堂毕业一共要多少学分？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        381002
+      ]
+    },
+    {
+      "id": 18,
+      "category": "数值条件",
+      "style": "学生",
+      "question": "二课要修满几分？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        381002
+      ]
+    },
+    {
+      "id": 19,
+      "category": "多条件并列",
+      "style": "正式",
+      "question": "第二课堂各模块最低学分是多少？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        382001
+      ]
+    },
+    {
+      "id": 20,
+      "category": "多条件并列",
+      "style": "学生",
+      "question": "二课思想成长、志愿公益、创新创业各要几分？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        382001
+      ]
+    },
+    {
+      "id": 21,
+      "category": "资格门槛",
+      "style": "正式",
+      "question": "本科毕业需要满足什么条件？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        144001
+      ]
+    },
+    {
+      "id": 22,
+      "category": "数据未明确",
+      "style": "自然",
+      "question": "大学修够多少学分能毕业？",
+      "handbookStatus": "HANDBOOK_NOT_EXPLICIT",
+      "requiredSorts": []
+    },
+    {
+      "id": 23,
+      "category": "资格门槛",
+      "style": "正式",
+      "question": "学士学位授予条件是什么？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        156005
+      ]
+    },
+    {
+      "id": 24,
+      "category": "数值条件",
+      "style": "学生",
+      "question": "平均分69能拿学位证吗？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        156005
+      ]
+    },
+    {
+      "id": 25,
+      "category": "资格门槛",
+      "style": "正式",
+      "question": "转专业需要什么条件？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        150001,
+        150002
+      ]
+    },
+    {
+      "id": 26,
+      "category": "资格门槛",
+      "style": "自然",
+      "question": "我想换专业，要符合哪些要求？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        150001,
+        150002
+      ]
+    },
+    {
+      "id": 27,
+      "category": "多条件并列",
+      "style": "正式",
+      "question": "转专业有哪些限制？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        149004,
+        151001
+      ]
+    },
+    {
+      "id": 28,
+      "category": "数值条件",
+      "style": "学生",
+      "question": "一个人能转几次专业？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        149004
+      ]
+    },
+    {
+      "id": 29,
+      "category": "流程完整",
+      "style": "正式",
+      "question": "本科生请假怎么申请？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        258000
+      ]
+    },
+    {
+      "id": 30,
+      "category": "时间期限",
+      "style": "学生",
+      "question": "请假四天找谁批？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        258000
+      ]
+    },
+    {
+      "id": 31,
+      "category": "处罚后果",
+      "style": "自然",
+      "question": "旷课多少会处分？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        268001
+      ]
+    },
+    {
+      "id": 32,
+      "category": "处罚后果",
+      "style": "学生",
+      "question": "旷课21学时是什么处分？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        268001
+      ]
+    },
+    {
+      "id": 33,
+      "category": "处罚后果",
+      "style": "正式",
+      "question": "考试作弊会怎么处分？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        267001,
+        268000
+      ]
+    },
+    {
+      "id": 34,
+      "category": "处罚后果",
+      "style": "学生",
+      "question": "带手机作弊会被开除吗？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        268000
+      ]
+    },
+    {
+      "id": 35,
+      "category": "例外豁免",
+      "style": "自然",
+      "question": "生病不能考试能缓考吗？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [],
+      "requiredAnyOf": [
+        [131003],
+        [165002]
+      ],
+      "goldCorrection": "课程考试工作管理规定第六条同样完整规定因病缓考条件，且更直接对应考试场景。"
+    },
+    {
+      "id": 36,
+      "category": "流程完整",
+      "style": "正式",
+      "question": "缓考要什么时候申请、找谁批准？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [],
+      "requiredAnyOf": [
+        [
+          131003
+        ],
+        [
+          165002
+        ]
+      ],
+      "goldCorrection": "两条均完整规定本科缓考条件和审批。"
+    },
+    {
+      "id": 37,
+      "category": "处罚后果",
+      "style": "自然",
+      "question": "宿舍用违规电器会怎么处理？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        270000
+      ],
+      "goldCorrection": "处分问题以学生违纪处分规定第二十七条续页为准；179001仅是综测扣分。"
+    },
+    {
+      "id": 38,
+      "category": "数据未明确",
+      "style": "学生",
+      "question": "宿舍用吹风机会处分吗？",
+      "handbookStatus": "HANDBOOK_NOT_EXPLICIT",
+      "requiredSorts": []
+    },
+    {
+      "id": 39,
+      "category": "处罚后果",
+      "style": "自然",
+      "question": "夜不归宿会怎样？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        272000,
+        179001
+      ]
+    },
+    {
+      "id": 40,
+      "category": "多条件并列",
+      "style": "学生",
+      "question": "晚上不回宿舍会扣分还是处分？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        272000,
+        179001
+      ]
+    },
+    {
+      "id": 41,
+      "category": "处罚后果",
+      "style": "自然",
+      "question": "校园网账号能借给别人吗？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        273000
+      ]
+    },
+    {
+      "id": 42,
+      "category": "处罚后果",
+      "style": "学生",
+      "question": "把校园网账号借同学会怎样？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        273000
+      ]
+    },
+    {
+      "id": 43,
+      "category": "多条件并列",
+      "style": "正式",
+      "question": "学生竞赛分哪几类？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        423001,
+        424000,
+        425000
+      ]
+    },
+    {
+      "id": 44,
+      "category": "多条件并列",
+      "style": "自然",
+      "question": "比赛分A到F类具体怎么划？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        423001,
+        424000,
+        425000
+      ]
+    },
+    {
+      "id": 45,
+      "category": "金额奖励",
+      "style": "正式",
+      "question": "学生竞赛奖励多少钱？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        425002
+      ]
+    },
+    {
+      "id": 46,
+      "category": "金额奖励",
+      "style": "学生",
+      "question": "国创赛省赛金奖奖金多少？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        425002
+      ]
+    },
+    {
+      "id": 47,
+      "category": "数值条件",
+      "style": "自然",
+      "question": "志愿服务多少小时能评星？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        407000,
+        408000
+      ]
+    },
+    {
+      "id": 48,
+      "category": "数值条件",
+      "style": "学生",
+      "question": "300小时是几星志愿者？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        408000
+      ]
+    },
+    {
+      "id": 49,
+      "category": "资格门槛",
+      "style": "正式",
+      "question": "学生干部任职条件是什么？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        393004
+      ]
+    },
+    {
+      "id": 50,
+      "category": "资格门槛",
+      "style": "学生",
+      "question": "当学生干部对成绩有什么要求？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        393004
+      ]
+    },
+    {
+      "id": 51,
+      "category": "流程完整",
+      "style": "正式",
+      "question": "学生会工作人员怎么产生？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        368001,
+        372002
+      ]
+    },
+    {
+      "id": 52,
+      "category": "流程完整",
+      "style": "学生",
+      "question": "学生会主席团是怎么选出来的？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        368001
+      ]
+    },
+    {
+      "id": 53,
+      "category": "资格门槛",
+      "style": "正式",
+      "question": "成立学生社团需要什么条件？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        400000
+      ]
+    },
+    {
+      "id": 54,
+      "category": "资格门槛",
+      "style": "学生",
+      "question": "20个人能成立社团吗？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        400000
+      ]
+    },
+    {
+      "id": 55,
+      "category": "金额奖励",
+      "style": "自然",
+      "question": "校内勤工助学工资多少？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        239000
+      ]
+    },
+    {
+      "id": 56,
+      "category": "金额奖励",
+      "style": "学生",
+      "question": "勤工助学一小时多少钱？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        239000
+      ]
+    },
+    {
+      "id": 57,
+      "category": "数据未明确",
+      "style": "自然",
+      "question": "学费住宿费具体是多少钱？",
+      "handbookStatus": "HANDBOOK_NOT_EXPLICIT",
+      "requiredSorts": []
+    },
+    {
+      "id": 58,
+      "category": "时间期限",
+      "style": "自然",
+      "question": "学费和住宿费什么时候交？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        323001
+      ]
+    },
+    {
+      "id": 59,
+      "category": "数据未明确",
+      "style": "自然",
+      "question": "心理咨询怎么预约办理？",
+      "handbookStatus": "HANDBOOK_NOT_EXPLICIT",
+      "requiredSorts": []
+    },
+    {
+      "id": 60,
+      "category": "例外豁免",
+      "style": "自然",
+      "question": "心理咨询会保密吗，什么情况会报告？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        337002,
+        338000
+      ]
+    },
+    {
+      "id": 61,
+      "category": "数值条件",
+      "style": "自然",
+      "question": "本科生图书馆能借几本、借多久？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        363000
+      ]
+    },
+    {
+      "id": 62,
+      "category": "金额奖励",
+      "style": "学生",
+      "question": "图书逾期一天多少钱？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        363000
+      ]
+    },
+    {
+      "id": 63,
+      "category": "多条件并列",
+      "style": "自然",
+      "question": "奖学金对成绩和体测分别有什么要求？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        187002,
+        195005
+      ]
+    },
+    {
+      "id": 64,
+      "category": "资格门槛",
+      "style": "学生",
+      "question": "挂科了还能拿学业奖学金吗？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        187002
+      ]
+    },
+    {
+      "id": 65,
+      "category": "例外豁免",
+      "style": "自然",
+      "question": "残疾学生体测怎么办？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        129003
+      ]
+    },
+    {
+      "id": 66,
+      "category": "例外豁免",
+      "style": "学生",
+      "question": "生病能免体测吗？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        129003
+      ]
+    },
+    {
+      "id": 67,
+      "category": "时间期限",
+      "style": "正式",
+      "question": "国家奖助学金最晚什么时候申请？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        202001
+      ]
+    },
+    {
+      "id": 68,
+      "category": "时间期限",
+      "style": "自然",
+      "question": "奖助学金申请后公示几天？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        203000
+      ]
+    },
+    {
+      "id": 69,
+      "category": "金额奖励",
+      "style": "自然",
+      "question": "临时困难补助多少钱、能申请几次？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        216001,
+        217000
+      ]
+    },
+    {
+      "id": 70,
+      "category": "金额奖励",
+      "style": "自然",
+      "question": "学校助学金多少钱？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        217001
+      ]
+    },
+    {
+      "id": 71,
+      "category": "时间期限",
+      "style": "自然",
+      "question": "学费缓交最长多久？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        324004
+      ]
+    },
+    {
+      "id": 72,
+      "category": "流程完整",
+      "style": "自然",
+      "question": "退学后学费怎么退？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        323005,
+        324000
+      ]
+    },
+    {
+      "id": 73,
+      "category": "时间期限",
+      "style": "自然",
+      "question": "学生申诉期限是多久？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        280002
+      ],
+      "goldCorrection": "提出申诉的期限是第六十三条10日；281001是委员会15日答复期限。"
+    },
+    {
+      "id": 74,
+      "category": "处罚后果",
+      "style": "自然",
+      "question": "处分会影响评奖吗？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        195002
+      ]
+    },
+    {
+      "id": 75,
+      "category": "多条件并列",
+      "style": "正式",
+      "question": "竞赛分类和奖金分别是什么？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        423001,
+        424000,
+        425000,
+        425002
+      ]
+    },
+    {
+      "id": 76,
+      "category": "流程完整",
+      "style": "正式",
+      "question": "社团成立要哪些材料和审批流程？",
+      "handbookStatus": "EXPLICIT",
+      "requiredSorts": [
+        400000,
+        401000
+      ]
+    }
+  ]
+}

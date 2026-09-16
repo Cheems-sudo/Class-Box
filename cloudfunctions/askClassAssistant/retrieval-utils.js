@@ -9,23 +9,64 @@ const minScore = 16;
 const relativeScoreRatio = 0.8;
 const documentScoreRatio = 0.55;
 const conceptSupplementLimit = 2;
-const retrievalVersion = "rag-keyword-v3";
+const retrievalVersion = "rag-keyword-v5";
+
+const quantitativeIntentPattern = /多少|几分|几个|几天|几日|多久|多少钱|几次|几学分|至少|最低|最高|不低于|不少于|不超过|截止|上限|下限|比例|百分之|金额|标准|几本|几册|多长时间/;
+const deadlineIntentPattern = /几天|几日|多久|什么时候|何时|最晚|截止|期限|多长时间|申请时间|公示/;
+const sanctionIntentPattern = /处分|处罚|后果|会怎样|怎么办|怎么处理|警告|记过|开除|退学|扣分|影响评奖/;
+const exceptionIntentPattern = /例外|特殊情况|残疾|伤病|生病|免修|免测|免考|缓考|延期|延长|能不能|可以不/;
+const principlePattern = /按[^。；]{0,30}(?:相关管理文件|相关文件|有关规定|相关规定|有关办法)[^。；]{0,10}执行|按照[^。；]{0,30}(?:相关管理文件|相关文件|有关规定|相关规定|有关办法)[^。；]{0,10}执行|具体(?:申请条件|要求|办法|流程)?[^。；]{0,18}按[^。；]{0,24}执行|另行规定|参照[^。；]{0,24}(?:规定|办法)|具体办法另行制定|根据有关办法/;
+const backgroundPattern = /^(?:第[^\s]{1,8}条\s*)?(?:为|本规定适用于|本办法适用于)|组织机构|领导小组|职责分工|负责解释|自[^。]{0,20}(?:施行|执行)|同时废止|制定本(?:规定|办法)/;
+const answerSignalPattern = /申请条件|资格|奖励标准|资助标准|工资标准|学分|排名|不低于|不少于|不超过|以上|以下|以内|截止|期限|工作日|警告|严重警告|记过|留校察看|开除|退学|免修|免测|免考|缓考|审批|办理|申请程序|流程/;
+const quantityPattern = /(?:\d+(?:\.\d+)?|[一二两三四五六七八九十百千万]+)(?:个工作日|工作日|学分|元(?:\/小时)?|分|天|日|个月|月|学期|小时|册|本|次|%|％|年)|百分之[一二两三四五六七八九十百千万\d]+|\d+(?:\.\d+)?\s*[-—～至]\s*\d+(?:\.\d+)?\s*(?:元|分|天|日|月|年|学分|小时|册|本|次|%|％)?/g;
 
 const normalize = (text) => String(text || "").toLowerCase().replace(/\s+/g, "");
 
-const getConceptRuns = (text) => normalize(text)
-  .replace(/[？?，,。！!；;：:]/g, "|")
+const getQuantitativeTokens = (text) => {
+  const source = normalize(text).replace(/／/g, "/");
+  const complete = source.match(quantityPattern) || [];
+  const tokens = [];
+  complete.forEach((token) => {
+    tokens.push(token);
+    const number = token.match(/\d+(?:\.\d+)?|[一二两三四五六七八九十百千万]+/);
+    const unit = token.match(/个工作日|工作日|学分|元\/小时|元|分|天|日|个月|月|学期|小时|册|本|次|%|％/);
+    if (number) tokens.push(number[0]);
+    if (unit) tokens.push(unit[0]);
+  });
+  return Array.from(new Set(tokens));
+};
+
+const getRequestedQuantityUnits = (question) => {
+  const source = normalize(question);
+  const units = [];
+  if (/多少钱|金额|工资|奖金|资助标准|奖励标准|多少元/.test(source)) units.push("元");
+  if (/(?:奖学金|助学金|补助|资助)[^？。]{0,12}(?:多少|最低|最高|标准)/.test(source)) units.push("元");
+  if (/几学分|多少学分|学分要求/.test(source)) units.push("学分");
+  if (/几分|多少分|最低分|最高分|平均分/.test(source)) units.push("分");
+  if (/几天|几日|工作日|公示|截止|最晚/.test(source)) units.push("日", "天", "工作日");
+  if (/多久|多长时间|几个月|期限/.test(source)) units.push("天", "日", "月", "个月", "年", "学期");
+  if (/几次|多少次/.test(source)) units.push("次");
+  if (/几本|多少本|几册|多少册/.test(source)) units.push("本", "册");
+  if (/几小时|多少小时|时薪|一小时/.test(source)) units.push("小时", "元/小时");
+  if (/比例|百分之|百分比/.test(source)) units.push("%", "％");
+  return Array.from(new Set(units));
+};
+
+const getConceptRuns = (text) => String(text || "").toLowerCase().replace(/\s+/g, "|")
+  .replace(/[？?，,、。！!；;：:]/g, "|")
   .replace(/是否|有没有|能不能|要不要|是什么|有哪些|有什么|有何|会受到|哪些|什么|怎么|如何|需要|要求|相关情况/g, "|")
-  .replace(/学生(?!会)/g, "|")
+  .replace(/学生(?!会|干部|骨干|社团)/g, "|")
   .replace(/和|与|及/g, "|")
   .replace(/[吗呢]$/g, "|")
   .split("|")
-  .map((part) => part.replace(/(?:管理规定|规定|办法)$/, ""))
+  .map((part) => part.replace(/[吗呢]$/, "").replace(/(?:管理规定|规定|办法)$/, ""))
   .filter((part) => part.length >= 2 && !stopWords.has(part));
 
 const ambiguousConcepts = new Set(["这个", "那个", "这项", "那项", "此项", "这样", "那样"]);
 const getConceptVariants = (concept) => {
   if (concept === "奖励") return ["奖励", "获奖", "奖金"];
+  if (/学生干部/.test(concept)) return [concept, concept.replace(/学生干部/g, "学生骨干")];
+  if (/体质健康测试/.test(concept)) return [concept, concept.replace(/体质健康测试/g, "体能测试")];
   return [concept];
 };
 
@@ -47,7 +88,7 @@ const tokenize = (text) => {
     }
   });
 
-  return Array.from(new Set(tokens));
+  return Array.from(new Set([...getQuantitativeTokens(text), ...tokens]));
 };
 
 const getQuestionPhrases = (question) => getConceptRuns(question)
@@ -57,7 +98,71 @@ const getQuestionIntentProfile = (question) => {
   const source = normalize(question);
   const asksForStudentAction = /要求|条件|怎么办|怎么|如何|需要|手续|流程|资格|标准|期限|什么时候/.test(source);
   const asksForOrganization = /谁负责|哪个部门|什么部门|管理机构|组织机构|领导小组|工作组|职责分工/.test(source);
-  return { asksForStudentAction, asksForOrganization };
+  return {
+    asksForStudentAction,
+    asksForOrganization,
+    quantitativeIntent: quantitativeIntentPattern.test(source)
+      || getQuantitativeTokens(source).length > 0
+      || /(?:成绩|学分|金额|工资|借阅|体能测试|体质健康测试)[^？。]{0,10}(?:要求|标准)/.test(source),
+    deadlineIntent: deadlineIntentPattern.test(source),
+    sanctionIntent: sanctionIntentPattern.test(source),
+    exceptionIntent: exceptionIntentPattern.test(source),
+    conditionIntent: /条件|要求|资格|门槛|怎么分等级|如何分等级|产生|选拔|怎么办理|怎么申请/.test(source),
+  };
+};
+
+const getChunkStructureProfile = (chunk) => {
+  const content = normalize(chunk && chunk.content);
+  const article = normalize(chunk && chunk.article);
+  const section = normalize(chunk && chunk.section);
+  const quantities = getQuantitativeTokens(content);
+  return {
+    isPrinciple: principlePattern.test(content),
+    isBackground: (backgroundPattern.test(content)
+      && !/认定程序|申请程序|办理流程/.test(content))
+      || (!article && /总则|附则|组织机构|职责/.test(section)),
+    isAttachment: /附件|附表|申请表|工资表|标准表/.test(`${section}${content.slice(0, 80)}`),
+    hasQuantity: quantities.length > 0,
+    quantities,
+    hasDeadline: /工作日|期限|截止|之前|以内|届满|开学|学期|考前|开始前|\d+天|\d+日|\d+个月|[一二三四五六七八九十]+天/.test(content),
+    hasSanction: /警告|严重警告|记过|留校察看|开除|退学|处分|取消资格|扣\d|扣分/.test(content),
+    hasException: /除外|特殊情况|残疾|伤病|因病|免修|免测|免考|缓考|延期|延长/.test(content),
+    hasCondition: /申请条件|任职条件|认定为.{0,8}困难|须同时|应同时|有下列情形|修完.{0,30}学分|准予毕业|选拔过程|选举产生|申请程序|缴费程序/.test(content),
+    hasAnswerSignal: answerSignalPattern.test(content),
+  };
+};
+
+const getMarginalInformationKeys = (candidate, intent, requestedUnits) => {
+  const keys = new Set((candidate.coveredConcepts || []).map((concept) => `concept:${concept}`));
+  (candidate.titleCoveredConcepts || []).forEach((concept) => keys.add(`scope:${concept}`));
+  const profile = candidate.structure || getChunkStructureProfile(candidate.chunk || candidate);
+  const content = normalize((candidate.chunk || candidate).content);
+  if (intent.quantitativeIntent) {
+    profile.quantities
+      .filter((quantity) => !requestedUnits.length || requestedUnits.some((unit) => quantity.includes(unit)))
+      .forEach((quantity) => keys.add(`quantity:${quantity}`));
+  }
+  if (intent.deadlineIntent && profile.hasDeadline) keys.add("evidence:deadline");
+  if (intent.sanctionIntent && profile.hasSanction) {
+    keys.add("evidence:sanction");
+    (content.match(/严重警告|警告|记过|留校察看|开除|退学|取消资格|扣分/g) || [])
+      .forEach((value) => keys.add(`sanction:${value}`));
+  }
+  if (intent.exceptionIntent && profile.hasException) {
+    keys.add("evidence:exception");
+    (content.match(/残疾|伤病|因病|免修|免测|免考|缓考|延期|延长/g) || [])
+      .forEach((value) => keys.add(`exception:${value}`));
+  }
+  if (intent.conditionIntent && profile.hasCondition) keys.add("evidence:condition");
+  if (intent.asksForStudentAction) {
+    if (/申请|提交|填写|报名/.test(content)) keys.add("flow:apply");
+    if (/材料|证明|申请表|审批表/.test(content)) keys.add("flow:materials");
+    if (/审核|审查|批准|审批/.test(content)) keys.add("flow:approve");
+    if (/公示/.test(content)) keys.add("flow:publish");
+    if (/备案|存入.{0,8}档案|归档/.test(content)) keys.add("flow:record");
+    if (/申诉|复核/.test(content)) keys.add("flow:review");
+  }
+  return keys;
 };
 
 const getConceptTokens = (concept) => tokenize(concept)
@@ -147,6 +252,50 @@ const scoreChunkContent = (chunk, tokens, concepts, question = "") => {
   // but should not crowd out substantive conditions, procedures or sanctions.
   if (!article && /第[一二三四五六七八九十百零〇0-9]+[章节编部分]|总则|附则/.test(content)) score *= 0.55;
   if (/废止|自发布之日起(?:施行|执行)|负责解释/.test(content)) score *= 0.35;
+  const structure = getChunkStructureProfile(chunk);
+  const semanticMatches = matchedTokens.size + concepts.filter((concept) => conceptIsCovered(content, concept)).length;
+  const isSemanticallyRelevant = semanticMatches >= 2 || concepts.some((concept) => concept.length >= 3 && content.includes(concept));
+  if (structure.isBackground && (intent.asksForStudentAction || intent.conditionIntent)
+    && !intent.asksForOrganization) score *= 0.4;
+  if (!article && /第[一二三四五六七八九十]+章[^。]{0,30}$/.test(content)) score *= 0.4;
+  if (structure.isPrinciple && (intent.quantitativeIntent || intent.deadlineIntent
+    || intent.sanctionIntent || intent.exceptionIntent || intent.asksForStudentAction)) score *= 0.72;
+  if (isSemanticallyRelevant) {
+    if (intent.quantitativeIntent && structure.hasQuantity) score += 42;
+    const requestedUnits = getRequestedQuantityUnits(question);
+    if (intent.quantitativeIntent && requestedUnits.length
+      && requestedUnits.some((unit) => structure.quantities.some((value) => value.includes(unit)))) score += 54;
+    if (intent.deadlineIntent && structure.hasDeadline) score += 34;
+    if (intent.sanctionIntent && structure.hasSanction) score += 42;
+    if (intent.exceptionIntent && structure.hasException) score += 30;
+    if (intent.conditionIntent && structure.hasCondition) score += 38;
+    if (intent.asksForStudentAction && structure.hasAnswerSignal) score += 18;
+    if (structure.isAttachment && (intent.quantitativeIntent || intent.deadlineIntent) && structure.hasQuantity) score += 24;
+  }
+  const normalizedQuestion = normalize(question);
+  if (/本科毕业/.test(normalizedQuestion) && !/学位/.test(normalizedQuestion)
+    && /学士学位|学位授予/.test(`${normalizedTitle}${content}`)) score *= 0.45;
+  if (/学士学位|学位证/.test(normalizedQuestion) && /学士学位授予/.test(normalizedTitle)) score += 36;
+  if (/学生干部/.test(normalizedQuestion) && /学生骨干/.test(normalizedTitle)) score += 90;
+  if (/产生|选拔|怎么选/.test(normalizedQuestion) && /选拔|选举产生|公开竞聘/.test(content)) score += 36;
+  if (/(?:要求|标准|条件|最低|至少|多少分|几分)/.test(normalizedQuestion)
+    && /过渡期|当学年|本学年|当前学年/.test(content)) score += 48;
+  if (/申请/.test(normalizedQuestion) && /申请/.test(content) && structure.hasDeadline) score += 84;
+  if (/公示/.test(normalizedQuestion) && /公示/.test(content) && structure.hasDeadline) score += 72;
+  if (/本科毕业/.test(normalizedQuestion) && /准予毕业/.test(content)) score += 180;
+  if (/最晚|截止|什么时候申请/.test(normalizedQuestion) && /申请/.test(content) && /日前|截止|最晚/.test(content)) score += 72;
+  if (/申诉期限/.test(normalizedQuestion) && /提出书面申诉/.test(content)) score += 84;
+  if (/违规电器|用电/.test(normalizedQuestion) && /住宿用电|功率达\s*300w|禁止使用的电器/i.test(content)) score += 84;
+  if (/学生干部/.test(normalizedQuestion) && /成绩/.test(normalizedQuestion)
+    && /学生骨干/.test(normalizedTitle) && /学习优秀|学习成绩/.test(content)) score += 72;
+  if (/分类|几类|a到f|a-f/.test(normalizedQuestion)
+    && /划分为a、b、c、d、e、f六类|a类：/i.test(content)) score += 96;
+  if (/分等级|困难等级/.test(normalizedQuestion) && /认定为.{0,8}困难等级/.test(content)) score += 120;
+  if (/转专业/.test(normalizedQuestion) && /转专业实施管理办法/.test(normalizedTitle)) score += 100;
+  if (/本科[^。？]{0,12}(?:毕业|学分)/.test(normalizedQuestion)
+    && /本科生学籍管理规定/.test(normalizedTitle)) score += 100;
+  if (structure.isPrinciple && !intent.quantitativeIntent && !intent.deadlineIntent
+    && !intent.sanctionIntent && !intent.exceptionIntent && !intent.conditionIntent) score += 42;
   return score;
 };
 
@@ -218,10 +367,23 @@ const startsNewArticle = (current, next) => {
   return content.startsWith(nextArticle) && /^\s/.test(content.slice(nextArticle.length));
 };
 
+const continuesPageEnumeration = (current, next) => {
+  if (!current || !next || String(current.title || "") !== String(next.title || "")) return false;
+  if (String(next.article || "").trim()) return false;
+  const currentText = String(current.content || "").trim();
+  const nextText = String(next.content || "").trim();
+  return /[：:；;，,]$/.test(currentText)
+    && /^(?:[（(]?[一二三四五六七八九十\d]+[）).、]|[a-fA-F]类|\d+\.)/.test(nextText);
+};
+
 const rankChunks = (chunks, question, limit) => {
   if (isUnderspecifiedQuestion(question)) return [];
   const tokens = tokenize(question);
   const concepts = getQuestionPhrases(question);
+  const semanticTokens = tokens.filter((token) => token.length >= 2
+    && !/^\d+(?:\.\d+)?$/.test(token)
+    && !/^(?:分|元|天|日|月|年|次|册|本|小时|学分|工作日|个工作日|元\/小时|%|％)$/.test(token)
+    && !lowInformationPhrases.has(token));
   const asksForGraduate = /研究生|硕士|博士/.test(String(question || ""));
   const sourceChunks = (Array.isArray(chunks) ? chunks : []).filter((chunk) =>
     asksForGraduate || (!/研究生/.test(String(chunk.title || ""))
@@ -246,6 +408,7 @@ const rankChunks = (chunks, question, limit) => {
   };
   const candidates = sourceChunks.map((chunk) => {
     const scoringChunk = withContinuationPreview(chunk);
+    const semanticSource = normalize(`${scoringChunk.title || ""} ${scoringChunk.article || ""} ${scoringChunk.content || ""}`);
     return ({
     chunk,
     // Production chunks always contain body metadata. Keep a deterministic
@@ -256,6 +419,10 @@ const rankChunks = (chunks, question, limit) => {
         ? Math.min(scoreTitle(chunk.title, tokens, concepts), minScore)
         : 0),
     coveredConcepts: getCoveredConcepts(scoringChunk, concepts),
+    titleCoveredConcepts: concepts.filter((concept) => conceptIsCovered(normalize(scoringChunk.title), concept)
+      || (/申请|办理/.test(concept) && normalize(scoringChunk.title).includes(concept.slice(-2)))),
+    structure: getChunkStructureProfile(scoringChunk),
+    semanticMatchCount: semanticTokens.filter((token) => semanticSource.includes(token)).length,
   });
   });
   const documents = new Map();
@@ -267,9 +434,15 @@ const rankChunks = (chunks, question, limit) => {
       titleConcepts: getTextCoveredConcepts(title, concepts),
       maxContentScore: 0,
       coveredConcepts: new Set(),
+      hasIntentEvidence: false,
     };
     current.maxContentScore = Math.max(current.maxContentScore, candidate.contentScore);
     candidate.coveredConcepts.forEach((concept) => current.coveredConcepts.add(concept));
+    const intent = getQuestionIntentProfile(question);
+    current.hasIntentEvidence ||= (intent.quantitativeIntent && candidate.structure.hasQuantity)
+      || (intent.deadlineIntent && candidate.structure.hasDeadline)
+      || (intent.sanctionIntent && candidate.structure.hasSanction)
+      || (intent.exceptionIntent && candidate.structure.hasException);
     documents.set(title, current);
   });
   const rankedDocuments = Array.from(documents.values()).map((document) => ({
@@ -280,11 +453,15 @@ const rankChunks = (chunks, question, limit) => {
 
   const bestDocumentScore = rankedDocuments[0].score;
   const primaryTitleConcepts = new Set(rankedDocuments[0].titleConcepts);
+  const intent = getQuestionIntentProfile(question);
+  const requestedUnits = getRequestedQuantityUnits(question);
   const selectedDocuments = rankedDocuments.filter((document, index) => index === 0
     || (document.titleScore > 0 && (
       document.score >= bestDocumentScore * documentScoreRatio
       || document.titleConcepts.some((concept) => !primaryTitleConcepts.has(concept))
-    )));
+    ))
+    || (index < 5 && document.hasIntentEvidence
+      && document.score >= bestDocumentScore * 0.38));
   const selectedTitles = new Set(selectedDocuments.map((document) => document.title));
   const documentScores = new Map(selectedDocuments.map((document) => [document.title, document.score]));
   const documentRanks = new Map(selectedDocuments.map((document, index) => [document.title, index]));
@@ -302,7 +479,13 @@ const rankChunks = (chunks, question, limit) => {
     const fillsConceptGap = concepts.length > 1
       && candidate.coveredConcepts.length > 0
       && candidate.contentScore >= documentBest * 0.45;
-    return passesStandardRatio || fillsConceptGap;
+    const suppliesSpecificEvidence = (candidate.coveredConcepts.length > 0 || candidate.semanticMatchCount >= 2)
+      && candidate.contentScore >= Math.max(minScore, documentBest * 0.38)
+      && ((intent.quantitativeIntent && candidate.structure.hasQuantity)
+        || (intent.deadlineIntent && candidate.structure.hasDeadline)
+        || (intent.sanctionIntent && candidate.structure.hasSanction)
+        || (intent.exceptionIntent && candidate.structure.hasException));
+    return passesStandardRatio || fillsConceptGap || suppliesSpecificEvidence;
   })
     .map((candidate) => {
       const title = String(candidate.chunk.title || candidate.chunk.section || "");
@@ -362,15 +545,89 @@ const rankChunks = (chunks, question, limit) => {
     best.candidate.coveredConcepts.forEach((concept) => covered.add(concept));
   }
 
-  return selected.map((item) => ({
+  // A title-heavy principle clause is useful routing context, but it is not a
+  // complete answer to a concrete question. Fill a missing evidence type from
+  // the already bounded candidate pool without increasing the hard cap.
+  const selectedHas = (predicate) => selected.some((candidate) => predicate(candidate.structure));
+  const evidenceNeeds = [
+    [intent.quantitativeIntent, (profile) => profile.hasQuantity
+      && (!requestedUnits.length || requestedUnits.some((unit) => profile.quantities.some((value) => value.includes(unit))))],
+    [intent.deadlineIntent, (profile) => profile.hasDeadline],
+    [intent.sanctionIntent, (profile) => profile.hasSanction],
+    [intent.exceptionIntent, (profile) => profile.hasException],
+    [intent.conditionIntent, (profile) => profile.hasCondition],
+  ];
+  evidenceNeeds.forEach(([needed, predicate]) => {
+    if (!needed) return;
+    const evidenceCandidates = candidates.filter((candidate) => selectedTitles.has(String(candidate.chunk.title || candidate.chunk.section || ""))
+      && candidate.contentScore >= minScore
+      && predicate(candidate.structure)
+      && (candidate.coveredConcepts.length > 0 || candidate.semanticMatchCount >= 2))
+      .sort((a, b) => {
+        const aUnitCoverage = requestedUnits.filter((unit) => a.structure.quantities.some((value) => value.includes(unit))).length;
+        const bUnitCoverage = requestedUnits.filter((unit) => b.structure.quantities.some((value) => value.includes(unit))).length;
+        return bUnitCoverage - aUnitCoverage
+        || b.contentScore - a.contentScore
+        || b.coveredConcepts.length - a.coveredConcepts.length
+        || b.semanticMatchCount - a.semanticMatchCount
+        || (Number(a.chunk.sort) || 0) - (Number(b.chunk.sort) || 0);
+      });
+    const supplement = evidenceCandidates.find((candidate) => !selectedKeys.has(candidate.chunk));
+    if (!supplement) return;
+    const selectedEvidence = selected.filter((candidate) => predicate(candidate.structure))
+      .sort((a, b) => b.semanticMatchCount - a.semanticMatchCount
+        || b.contentScore - a.contentScore)[0];
+    if (selectedEvidence
+      && selectedEvidence.semanticMatchCount >= supplement.semanticMatchCount
+      && selectedEvidence.contentScore >= supplement.contentScore * 1.15) return;
+    selected.push({
+      ...supplement,
+      documentRank: documentRanks.get(String(supplement.chunk.title || supplement.chunk.section || "")) ?? selectedDocuments.length,
+      score: supplement.contentScore + 80,
+    });
+    selectedKeys.add(supplement.chunk);
+  });
+
+  const sortedSelected = selected.sort((a, b) => b.score - a.score
+    || b.semanticMatchCount - a.semanticMatchCount
+    || (Number(a.chunk.sort) || 0) - (Number(b.chunk.sort) || 0)).slice(0, hardLimit);
+  const marginalKeys = new Set();
+  const marginalSelected = [];
+  const redundantCandidates = [];
+  const evidenceFloor = Math.min(4, Math.max(1, Number(limit) || 1));
+  sortedSelected.forEach((candidate) => {
+    const keys = getMarginalInformationKeys(candidate, intent, requestedUnits);
+    const added = Array.from(keys).filter((key) => !marginalKeys.has(key));
+    const candidateTitle = String(candidate.chunk.title || candidate.chunk.section || "");
+    const representedTitles = new Set(marginalSelected.map((item) => String(item.chunk.title || item.chunk.section || "")));
+    const substantiveAdded = added.filter((key) => !key.startsWith("flow:"));
+    const isRedundantSecondaryPolicy = marginalSelected.length > 0
+      && !representedTitles.has(candidateTitle)
+      && substantiveAdded.length === 0;
+    if ((marginalSelected.length >= evidenceFloor && added.length === 0) || isRedundantSecondaryPolicy) {
+      redundantCandidates.push(candidate);
+      return;
+    }
+    added.forEach((key) => marginalKeys.add(key));
+    marginalSelected.push({ ...candidate, marginalCoverageAdded: added });
+  });
+  const rankedResult = marginalSelected.map((item) => ({
     ...item.chunk,
     retrievalMeta: {
       score: Number(item.score.toFixed(2)),
       contentScore: Number(item.contentScore.toFixed(2)),
       coveredConcepts: item.coveredConcepts,
+      marginalCoverageAdded: item.marginalCoverageAdded,
       continuation: false,
     },
   }));
+  rankedResult.retrievalDiagnostics = {
+    candidatePrimaryCount: sortedSelected.length,
+    primaryCount: rankedResult.length,
+    redundantChunkCount: redundantCandidates.length,
+    marginalCoverageAdded: Array.from(marginalKeys),
+  };
+  return rankedResult;
 };
 
 const endsWithContinuation = (content) => {
@@ -415,7 +672,8 @@ const expandContinuationChunks = (allChunks, rankedChunks, limit) => {
     let current = chunk;
     let index = ordered.findIndex((candidate) => getKey(candidate) === getKey(current));
 
-    while (index >= 0 && endsWithContinuation(current.content)) {
+    while (index >= 0 && (endsWithContinuation(current.content)
+      || continuesPageEnumeration(current, ordered[index + 1]))) {
       const next = ordered[index + 1];
       if (!next || String(next.title || "") !== String(chunk.title || "")) break;
       if (startsNewArticle(current, next)) break;
@@ -439,6 +697,10 @@ module.exports = {
   getCoveredConcepts,
   getQuestionPhrases,
   getQuestionIntentProfile,
+  getChunkStructureProfile,
+  getMarginalInformationKeys,
+  getQuantitativeTokens,
+  getRequestedQuantityUnits,
   isUnderspecifiedQuestion,
   minScore,
   relativeScoreRatio,
