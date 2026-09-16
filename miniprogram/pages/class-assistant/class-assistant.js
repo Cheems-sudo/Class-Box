@@ -1,5 +1,6 @@
 // 页面逻辑：管理 class-assistant 页面的状态、用户交互与数据请求。
 const maxQuestionLength = 300;
+const { formatAssistantMessage } = require("../../utils/assistant-message-format");
 const fallbackTypingInterval = 40;
 const typingCharsPerTick = 4;
 const scrollThrottleMs = 80;
@@ -17,7 +18,7 @@ Page({
     scrollIntoView: "message-bottom",
     maxQuestionLength,
     inputBarBottom: 0,
-    scrollBottomPadding: 132,
+    keyboardHeight: 0,
   },
   pageAlive: false,
   activeRequestId: "",
@@ -112,7 +113,7 @@ Page({
 
     this.setData({
       inputBarBottom,
-      scrollBottomPadding: height > 0 ? height + 132 : 132,
+      keyboardHeight: height,
     }, () => {
       this.scrollToBottom();
     });
@@ -120,7 +121,7 @@ Page({
   onQuestionBlur() {
     this.setData({
       inputBarBottom: 0,
-      scrollBottomPadding: 132,
+      keyboardHeight: 0,
     });
   },
   handleActionTap() {
@@ -277,7 +278,8 @@ Page({
     });
   },
   typeAnswer(requestId, messageId, answer) {
-    const text = answer.content + (answer.citation ? `\n${answer.citation}` : "");
+    const formattedContent = formatAssistantMessage(answer.content);
+    const text = formattedContent + (answer.citation ? `\n${answer.citation}` : "");
     let index = 0;
 
     const tick = () => {
@@ -353,7 +355,7 @@ Page({
 
       return {
         ...item,
-        content: answer.content,
+        content: formatAssistantMessage(answer.content),
         citation: answer.citation,
         loading: false,
       };

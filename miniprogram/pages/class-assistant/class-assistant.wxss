@@ -1,11 +1,12 @@
 /* 页面样式：定义 class-assistant 页面的布局、视觉状态与响应式细节。 */
 page {
   background: #f6f8fb;
+  height: 100%;
 }
 
 .page {
-  height: 100vh;
-  min-height: 100vh;
+  height: 100%;
+  min-height: 100%;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
@@ -151,6 +152,7 @@ page {
   left: 0;
   right: 0;
   bottom: 0;
+  padding: 14rpx 20rpx calc(14rpx + constant(safe-area-inset-bottom));
   padding: 14rpx 20rpx calc(14rpx + env(safe-area-inset-bottom));
   background: rgba(246, 248, 251, 0.96);
   border-top: 1rpx solid #e7ecf3;

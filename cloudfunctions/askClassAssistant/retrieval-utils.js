@@ -240,7 +240,12 @@ const scoreChunkContent = (chunk, tokens, concepts, question = "") => {
   });
   if (matchedTokens.size >= 2) score += matchedTokens.size * 5;
   const intent = getQuestionIntentProfile(question);
-  if (intent.asksForStudentAction && !intent.asksForOrganization) {
+  const semanticMatches = matchedTokens.size + concepts.filter((concept) => conceptIsCovered(content, concept)).length;
+  const isSemanticallyRelevant = semanticMatches >= 2 || concepts.some((concept) => concept.length >= 3 && content.includes(concept));
+  const hasSemanticAnchor = score > 0 || tokens.some((token) => token.length >= 2
+    && !lowInformationPhrases.has(token)
+    && (normalizedTitle.includes(token) || section.includes(token) || keywords.includes(token)));
+  if (hasSemanticAnchor && intent.asksForStudentAction && !intent.asksForOrganization) {
     const actionSignals = ["申请", "条件", "要求", "应当", "必须", "须", "学分", "资格", "期限", "时间", "完成", "办理", "认定", "标准", "处分", "后果"];
     const actionMatches = actionSignals.filter((signal) => content.includes(signal)).length;
     score += Math.min(actionMatches * 6, 36);
@@ -253,8 +258,6 @@ const scoreChunkContent = (chunk, tokens, concepts, question = "") => {
   if (!article && /第[一二三四五六七八九十百零〇0-9]+[章节编部分]|总则|附则/.test(content)) score *= 0.55;
   if (/废止|自发布之日起(?:施行|执行)|负责解释/.test(content)) score *= 0.35;
   const structure = getChunkStructureProfile(chunk);
-  const semanticMatches = matchedTokens.size + concepts.filter((concept) => conceptIsCovered(content, concept)).length;
-  const isSemanticallyRelevant = semanticMatches >= 2 || concepts.some((concept) => concept.length >= 3 && content.includes(concept));
   if (structure.isBackground && (intent.asksForStudentAction || intent.conditionIntent)
     && !intent.asksForOrganization) score *= 0.4;
   if (!article && /第[一二三四五六七八九十]+章[^。]{0,30}$/.test(content)) score *= 0.4;
@@ -294,7 +297,8 @@ const scoreChunkContent = (chunk, tokens, concepts, question = "") => {
   if (/转专业/.test(normalizedQuestion) && /转专业实施管理办法/.test(normalizedTitle)) score += 100;
   if (/本科[^。？]{0,12}(?:毕业|学分)/.test(normalizedQuestion)
     && /本科生学籍管理规定/.test(normalizedTitle)) score += 100;
-  if (structure.isPrinciple && !intent.quantitativeIntent && !intent.deadlineIntent
+  if (structure.isPrinciple && hasSemanticAnchor
+    && !intent.quantitativeIntent && !intent.deadlineIntent
     && !intent.sanctionIntent && !intent.exceptionIntent && !intent.conditionIntent) score += 42;
   return score;
 };

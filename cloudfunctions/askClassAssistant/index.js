@@ -5,6 +5,7 @@ const { runWithSingleRetry, sanitizeErrorMessage } = require("./ai-utils");
 const { expandContinuationChunks, rankChunks, retrievalVersion } = require("./retrieval-utils");
 const { parseModelAnswer } = require("./citation-utils");
 const { expandQuestionAliases, getSupplementalAnswer } = require("./supplemental-answers");
+const { finishRequestDocument } = require("./request-state-utils");
 const { requestDeepSeek } = require("./deepseek-client");
 const {
   consumeUserQuota,
@@ -395,16 +396,11 @@ const cancelRequest = async (requestId, openid) => {
   });
 };
 
-const finishRequest = async (requestId, status) => {
+const finishRequest = async (requestId, status, details = null) => {
   if (!requestId) return;
 
   try {
-    await getRequestDoc(requestId).update({
-      data: {
-        status,
-        updatedAt: new Date(),
-      },
-    });
+    await finishRequestDocument(getRequestDoc(requestId), status, details, retrievalVersion);
   } catch (error) {
     logSafeError("askClassAssistant request state update failed", error, { stage: "request_state" });
   }
@@ -448,6 +444,14 @@ const buildSystemPrompt = (handbookName) => `你是班级助手，只能根据�
 回答内容的顺序应根据问题本身决定，优先呈现用户最需要知道的结论、条件、标准、步骤、结果、限制、例外或注意事项，而不是机械按照学生手册原文顺序罗列。条款跨片段时必须结合相邻续文完整理解，不得在逗号、冒号或未完句处截断，也不得把下一条、下一节或无关条款误当作续文。
 
 当问题只有名词、简称或短语，含义不够明确时，应先给出最直接的定义、计算方式、办理规则或核心要求，再简要补充最重要的相关规定，不要无差别罗列所有包含该词的内容。回答应直接、清晰，优先给结论，再给必要说明，不要重复问题，不要堆砌无关制度内容。
+
+默认只回答用户当前明确询问的内容。单一事实问题通常控制在1至3个短段落，不要因为上下文还包含其他奖项、资助、处分或流程就顺带展开；多意图、多条件、处罚分级、完整流程，以及用户明确要求“详细”“全部”时，必须覆盖各项核心意图，不得为了简短遗漏关键信息或必要例外。多条片段表达同一事实时只回答一次。
+
+结论必须前置：问“多少、几分、多少钱、多久、几次”时，如证据明确，第一句直接给出对应数字和单位；问“会怎样”时，先说结果或处分，再说适用条件；问“怎么办”时，先给第一步和核心步骤，再补限制；问“能不能”时，先回答“可以”“不可以”“满足条件可以”或“手册未明确”，再解释原因。不要先铺陈制度背景。
+
+如果片段中同时出现现行正式标准与旧表、模板或历史口径，应优先回答现行正式标准；确有必要提及旧值时，必须明确标注其来源和时效，不得把两个数值并列成同一现行标准。
+
+正文使用适合手机阅读的短段落或简单列表。不要输出Markdown表格，不要使用星号粗体、井号标题或代码块；表格型信息应改写为逐项纵向文本。查看依据由系统单独展示，正文不要复制制度原文或堆叠引用信息。
 
 回答正文后必须另起一行输出实际使用的片段编号，例如“引用片段：1,2”。只能填写确实支持回答的片段编号，不得填写未实际使用的片段；不要自行输出“依据”、条款编号、页码或引用列表，系统会把片段编号转换成真实依据。
 
@@ -559,6 +563,7 @@ exports.main = async (event = {}) => {
   const aiProvider = "deepseek";
   let requestRegistered = false;
   let requestStatus = "failed";
+  let requestCompletion = null;
   let traceId = "";
   let aiInvoked = false;
   let aiSucceeded = false;
@@ -703,7 +708,14 @@ exports.main = async (event = {}) => {
     }));
 
     if (!matchedChunks.length) {
-      requestStatus = "no_match";
+      requestStatus = "answered";
+      requestCompletion = {
+        outcome: "retrieval_no_match",
+        question,
+        answer: noMatchAnswer,
+        handbookVersion,
+        matchedChunks: matchedChunkSummary,
+      };
       await writeUnansweredQuestion({
         question,
         handbookVersion,
@@ -800,7 +812,14 @@ exports.main = async (event = {}) => {
     const parsedAnswer = parseModelAnswer(modelAnswer, matchedChunks, expandContinuationChunks);
 
     if (parsedAnswer.body === noMatchAnswer) {
-      requestStatus = "no_match";
+      requestStatus = "answered";
+      requestCompletion = {
+        outcome: "model_no_match",
+        question,
+        answer: noMatchAnswer,
+        handbookVersion,
+        matchedChunks: matchedChunkSummary,
+      };
       await writeUnansweredQuestion({
         question,
         handbookVersion,
@@ -842,7 +861,7 @@ exports.main = async (event = {}) => {
     return fail(errorType === "config" ? "班级助手配置异常，请联系管理员" : "回答失败，请稍后再试", errorType, { requestId });
   } finally {
     if (requestRegistered) {
-      await finishRequest(requestId, requestStatus);
+      await finishRequest(requestId, requestStatus, requestCompletion);
     }
   }
 };
